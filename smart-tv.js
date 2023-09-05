@@ -36,7 +36,7 @@ if (typeof localStorage == "undefined" && typeof FileSystem == "function") {
 
     lStorage.setItem = function(key, value) {
         changed = true;
-        this[key] = value.toString();
+        this[key] = value;
         this.saveFile(true);
         return this[key];
     }
