@@ -1,17 +1,17 @@
 {
-  "name": "Countdown Timer",
-  "short_name": "Countdown",
-  "description": "Minimal fullscreen countdown timer — no build step, no dependencies.",
-  "start_url": ".",
-  "display": "standalone",
-  "background_color": "#112233",
-  "theme_color": "#112233",
-  "icons": [
-    {
-      "src": "icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    }
-  ]
+    "name": "Countdown Timer",
+    "short_name": "Countdown",
+    "description": "A full-screen countdown timer with multiple timers, Pomodoro mode, themes, and more.",
+    "start_url": "./index.html",
+    "display": "standalone",
+    "background_color": "#112233",
+    "theme_color": "#112233",
+    "icons": [
+        {
+            "src": "icon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ]
 }

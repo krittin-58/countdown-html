@@ -1,85 +1,85 @@
 # countdown-html
 
-A minimal, full-screen countdown timer that runs entirely in the browser — no build step, no dependencies.
+A full-screen countdown timer that runs entirely in the browser — no build step, no dependencies.
 
 ## Features
 
 ### Timers
 - **Multiple timers** — run several countdowns side-by-side in a responsive grid
 - **Pause / Resume** — freeze any individual timer and continue exactly where it left off
-- **Pause All / Resume All** — single buttons to control every timer at once
-- **Preset durations** — built-in buttons for 5 m, 10 m, 15 m, 25 m (Pomodoro 🍅), 45 m, plus **saveable custom presets**
+- **Preset durations** — built-in 5 m, 10 m, 15 m, 25 m 🍅, 45 m; plus **save your own custom presets**
 - **Timer names** — label each timer (e.g. "Meeting", "Lunch break")
-- **Count-up mode** — after reaching zero the display switches to +MM:SS to show elapsed overtime
-- **Auto-repeat / Loop** — enable per-timer to automatically restart after each cycle
-- **Pomodoro counter** — 🍅 badges accumulate for every completed cycle
-- **Timer chain** — "Then start" option links timers so one starts automatically when another finishes
-- **Countdown to datetime** — switch the add form to "Until" mode and pick a target date/time
-
-### Visuals
+- **Timer Sets** — save and restore groups of timers (e.g. a full workshop schedule)
 - **Progress bar** — visual fill showing time remaining vs. total
-- **Urgent mode** — when < 60 s remain the display switches to seconds-only in large red text
-- **Per-timer accent color** — a color picker inside each card's ⚙ options
-- **Drag-to-reorder** — drag timer cards to rearrange them
-- **Themes** — Dark, Ocean, Sunset, Forest, Purple, Light; auto-selects Light if the OS is in light mode
-- **Current time clock** — live HH:MM:SS in the top-right corner
-- **Active timer highlight** — the focused card gets an accent-colored outline
+- **Urgent mode** — when < 60 s remain, the display switches to seconds-only in large red text
+- **Persistent state** — timers survive a page refresh via `localStorage`
 
-### Sound & Notifications
-- **Beep alert** — three-tone beep via Web Audio API when a timer reaches zero
-- **Mute toggle** — silence all beeps with one click (🔊 / 🔇)
-- **Waveform selector** — choose sine, square, sawtooth, or triangle
-- **Volume slider** — adjust beep loudness
-- **Browser Notifications** — opt-in desktop notification when a timer ends (works even when the tab is in the background)
+### Productivity
+- **🍅 Pomodoro Session Manager** — auto-cycles Work → Short Break → Work → Long Break with round counter
+- **↕ Sequential Mode** — automatically starts the next timer when the current one finishes
+- **📊 Session History** — logs every completed timer; shows today's total focus time
 
-### UX & Sharing
-- **Keyboard shortcuts** — see table below
-- **Wake Lock** — requests the Screen Wake Lock API to prevent the screen from sleeping while timers are running
-- **Share URL** — 🔗 button copies a URL with all current timer configs to the clipboard
-- **Export / Import JSON** — 📋 button opens an editor to copy/paste full timer state as JSON
-- **URL parameters** — deep-link to a pre-configured timer (see below)
-- **Persistent state** — timers survive page refreshes via `localStorage`
-- **PWA / installable** — add to home screen on mobile or install on desktop for offline use
-- **Smart TV support** — falls back to a file-based `localStorage` shim on Samsung Smart TVs
+### Notifications & Audio
+- **Browser Notifications** — get a desktop alert when a timer finishes, even in a background tab
+- **Alarm sounds** — choose from Beep (default), Bell, Chime, or Silent
+- **Volume control** — adjust the alarm volume with a slider
+
+### Visual
+- **Themes** — Dark, Light, Ocean, Sunset, Forest, Purple
+- **⊙ Clock** — toggle a live clock alongside your timers
+- **Font size slider** — scale up timer digits for projectors or large displays
+- **Fullscreen** — one click to enter / exit
+
+### Sharing & Integration
+- **🔗 Share URL** — encode all current timers into a URL to share with others
+- **iframe embed** — ready-made `<iframe>` snippet for embedding in any web page
+- **OBS Browser Source** — transparent-background mode for streaming overlays
+- **PWA** — install as a standalone app; works fully offline
+
+### Keyboard shortcuts
+| Key | Action |
+|-----|--------|
+| `Space` | Pause / Resume the first active timer |
+| `N` | Open the Add Timer form |
+| `R` | Reset the first timer |
+| `F` | Toggle fullscreen |
+| `Esc` | Close modal / hide controls |
+
+### Accessibility
+- ARIA labels and roles on all interactive elements
+- `aria-live` regions for timer displays and clock
+- Progress bars with `role="progressbar"` and `aria-valuenow`
+
+### Smart TV
+- Falls back to a file-based `localStorage` shim on Samsung Smart TVs
 
 ## Usage
 
-Open `index.html` in any modern browser (or serve the folder from a local HTTP server for full PWA and Wake Lock support).
+Open `index.html` in any modern browser (or install it as a PWA).
 
 | Action | How |
 |--------|-----|
-| Add a timer | Click **＋ ADD**, fill in name/minutes or click a preset, then **▶ START** |
-| Add timer until a time | Click **＋ ADD → 📅 Until**, pick a target date/time |
-| Pause / Resume | Click **⏸ PAUSE** / **▶ RESUME** on the card, or press **Space** |
-| Pause / Resume all | Click **⏸ ALL** / **▶ ALL** |
-| Reset a timer | Click **↺ RESET** or press **R** |
-| Remove a timer | Click **✕** or press **Delete** |
-| Timer options | Click **⚙** on a card to set color, auto-repeat, and chain-to |
-| Drag to reorder | Drag any timer card to a new position |
+| Add a timer | Click **＋ ADD**, fill in name / minutes or click a preset, then **▶ START** |
+| Save a custom preset | Fill in name + minutes, click **💾** next to START |
+| Pause / Resume | Click **⏸ PAUSE** / **▶ RESUME** on any timer card |
+| Reset | Click **↺ RESET** on the timer card |
+| Remove | Click **✕** on the timer card |
+| Save timer set | Click **⊞ SETS → 💾 Save Current Set** |
+| Load timer set | Click **⊞ SETS**, then click a saved set name |
+| Start Pomodoro | Click **🍅 POMO** |
+| Sequential mode | Click **↕ SEQ** — next timer starts automatically |
 | Hide controls | Click **HIDE**, or click any timer display |
-| Show controls | Click anywhere while hidden |
-| Fullscreen | Click **⛶ FS** or press **F** |
+| Show controls | Click anywhere on the page while hidden |
+| Fullscreen | Click **⛶ FS** |
 | Change theme | Use the theme dropdown |
-| Enable notifications | Click **🔔** and allow in the browser prompt |
-| Share timers | Click **🔗** to copy a shareable URL |
-| Export / Import | Click **📋** then **📤 Export** or paste JSON and click **📥 Import** |
-| Save a custom preset | Set name + minutes, click **💾 Save** in the add form |
-
-## Keyboard Shortcuts
-
-| Key | Action |
-|-----|--------|
-| **Space** | Pause / Resume the active timer |
-| **R** | Reset the active timer |
-| **Delete** | Remove the active timer |
-| **F** | Toggle fullscreen |
-| **Escape** | Close add form, or toggle controls |
-| **← / →** | Cycle the active timer between cards |
+| Change sound / volume | Use the sound dropdown and 🔊 slider |
+| Adjust font size | Use the **Aa** slider |
+| View history | Click **📊 STATS** |
+| Share / Embed | Click **🔗 SHARE** |
 
 ## URL Parameters
 
-Start a timer automatically by passing query parameters:
-
+### Legacy query-string (single timer)
 ```
 index.html?minutes=25&name=Pomodoro
 ```
@@ -89,12 +89,16 @@ index.html?minutes=25&name=Pomodoro
 | `minutes` | Duration in minutes (decimals allowed, e.g. `1.5`) |
 | `name`    | Optional label for the timer |
 
-## Share URL
+### Hash-based routing (multi-timer / OBS)
 
-The **🔗 SHARE** button generates a URL like:
+Generated automatically by the **🔗 SHARE** button.
 
 ```
-index.html#share=[{"name":"Pomodoro","totalMs":1500000,...}]
+index.html#timers=[{"n":"Work","m":25},{"n":"Break","m":5}]
+index.html#timers=[{"n":"Work","m":25}]&obs=1   ← transparent background for OBS
 ```
 
-Opening that URL restores all shared timers (name, duration, color, repeat setting).
+| Hash param | Description |
+|------------|-------------|
+| `timers`   | JSON array of `{n: name, m: minutes}` objects |
+| `obs`      | Set to `1` to enable transparent OBS overlay mode |
