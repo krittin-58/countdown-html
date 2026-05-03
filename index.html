@@ -183,22 +183,30 @@
     function getRemaining(t) {
         return t.isPaused ? t.remainingMs : t.endTime - Date.now();
     }
+    function findTimer(id) {
+        return timers.find(function(x){ return x.id===id; });
+    }
+    function maxTimerId() {
+        var max = 0;
+        timers.forEach(function(t){ if (t.id > max) max = t.id; });
+        return max;
+    }
     function pauseTimer(id) {
-        var t = timers.filter(function(x){ return x.id===id; })[0];
+        var t = findTimer(id);
         if (!t || t.isPaused || t.hasFinished) return;
         t.remainingMs = Math.max(0, t.endTime - Date.now());
         t.isPaused = true;
         saveState();
     }
     function resumeTimer(id) {
-        var t = timers.filter(function(x){ return x.id===id; })[0];
+        var t = findTimer(id);
         if (!t || !t.isPaused) return;
         t.endTime = Date.now() + t.remainingMs;
         t.isPaused = false;
         saveState();
     }
     function resetTimer(id) {
-        var t = timers.filter(function(x){ return x.id===id; })[0];
+        var t = findTimer(id);
         if (!t) return;
         t.remainingMs = t.totalMs;
         t.endTime = Date.now() + t.totalMs;
@@ -213,7 +221,7 @@
         renderCards();
     }
     function togglePause(id) {
-        var t = timers.filter(function(x){ return x.id===id; })[0];
+        var t = findTimer(id);
         if (!t) return;
         if (t.isPaused) resumeTimer(id); else pauseTimer(id);
     }
@@ -377,7 +385,7 @@
                         isPaused: s.isPaused, hasFinished: s.hasFinished, hasPlayedSound: s.hasPlayedSound
                     };
                 });
-                nextId = +localStorage.nextId || (Math.max.apply(null, [0].concat(timers.map(function(t){ return t.id; }))) + 1);
+                nextId = +localStorage.nextId || (maxTimerId() + 1);
                 return true;
             }
         } catch(e) {}
