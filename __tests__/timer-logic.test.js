@@ -30,9 +30,9 @@ const FIXED_NOW = 1_700_000_000_000;
  * @returns {Window}          The jsdom Window object
  */
 function loadApp(searchStr = '') {
-    const raw = fs.readFileSync(HTML_PATH, 'utf-8');
-    // Remove the external smart-tv.js script tag to avoid resource-loading issues.
-    const html = raw.replace(/<script\s+src="smart-tv\.js"><\/script>/g, '');
+    const html = fs.readFileSync(HTML_PATH, 'utf-8');
+    // Note: the external smart-tv.js <script> tag in the HTML is silently ignored
+    // by jsdom when the `resources` option is not set to 'usable'.
 
     const dom = new JSDOM(html, {
         runScripts: 'dangerously',
