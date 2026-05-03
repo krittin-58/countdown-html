@@ -5,6 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Countdown</title>
 <link rel="manifest" href="manifest.json">
+<!-- Google Analytics — replace G-XXXXXXXXXX with your Measurement ID -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){ dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-XXXXXXXXXX');
+</script>
 <style>
     :root {
         --bg-start: #123;
@@ -142,6 +150,24 @@
     }
     .ctrl-row { display:flex; flex-wrap:wrap; gap:4px; align-items:center; margin-bottom:4px; }
 
+    /* Control panel section labels */
+    .ctrl-section-label {
+        font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+        color: var(--accent); opacity: 0.6;
+        margin: 6px 0 2px; padding: 0 2px;
+        border-bottom: 1px solid var(--btn-border);
+        user-select: none;
+    }
+    .ctrl-section-label:first-child { margin-top: 0; }
+
+    /* GitHub Stars badge */
+    .github-stars-btn {
+        display: inline-flex; align-items: center;
+        opacity: 0.8; transition: opacity 0.15s;
+        text-decoration: none;
+    }
+    .github-stars-btn:hover { opacity: 1; }
+
     /* Add form */
     #add-form { margin-top:8px; display:none; }
     #add-form.visible { display:block; }
@@ -200,17 +226,21 @@
     <div id="timers" onclick="onTimersClick(event)"></div>
 
     <div id="control">
-        <!-- Row 1: add / global actions -->
+        <!-- ── Basic ── -->
+        <div class="ctrl-section-label">Basic</div>
         <div class="ctrl-row">
-            <button onclick="toggleAddForm()">＋ ADD</button>
-            <button onclick="pauseAll()">⏸ ALL</button>
-            <button onclick="resumeAll()">▶ ALL</button>
-            <button onclick="toggleControls()">HIDE</button>
-            <button id="btn-fs" onclick="toggleFullscreen()">⛶ FS</button>
+            <button onclick="gaTrack('add_timer_open'); toggleAddForm()">＋ ADD</button>
+            <button onclick="gaTrack('pause_all'); pauseAll()">⏸ ALL</button>
+            <button onclick="gaTrack('resume_all'); resumeAll()">▶ ALL</button>
+            <button onclick="gaTrack('controls_toggle'); toggleControls()">HIDE</button>
+            <button id="btn-fs" onclick="gaTrack('fullscreen_toggle'); toggleFullscreen()">⛶ FS</button>
         </div>
-        <!-- Row 2: theme / notify / share / I/O -->
+
+        <!-- ── Advanced ── -->
+        <div class="ctrl-section-label">Advanced</div>
+        <!-- Theme / Notify / Share / I/O -->
         <div class="ctrl-row">
-            <select id="theme-select" onchange="setTheme(this.value)">
+            <select id="theme-select" onchange="gaTrack('theme_change',{theme:this.value}); setTheme(this.value)">
                 <option value="">Dark</option>
                 <option value="ocean">Ocean</option>
                 <option value="sunset">Sunset</option>
@@ -218,14 +248,14 @@
                 <option value="purple">Purple</option>
                 <option value="light">Light</option>
             </select>
-            <button id="btn-notify" onclick="requestNotificationPermission()" title="Enable browser notifications">🔔</button>
-            <button onclick="shareTimers()" title="Copy shareable URL to clipboard">🔗</button>
-            <button onclick="toggleIO()" title="Export / Import JSON">📋</button>
+            <button id="btn-notify" onclick="gaTrack('notification_request'); requestNotificationPermission()" title="Enable browser notifications">🔔</button>
+            <button onclick="gaTrack('share_url'); shareTimers()" title="Copy shareable URL to clipboard">🔗</button>
+            <button onclick="gaTrack('io_panel_open'); toggleIO()" title="Export / Import JSON">📋</button>
         </div>
-        <!-- Row 3: sound settings -->
+        <!-- Sound settings -->
         <div id="sound-row">
-            <button id="btn-mute" onclick="toggleMute()" title="Mute / unmute beep">🔊</button>
-            <select id="tone-select" onchange="soundTone=this.value" title="Beep waveform">
+            <button id="btn-mute" onclick="gaTrack('sound_mute_toggle'); toggleMute()" title="Mute / unmute beep">🔊</button>
+            <select id="tone-select" onchange="gaTrack('sound_tone_change',{tone:this.value}); soundTone=this.value" title="Beep waveform">
                 <option value="sine">sine</option>
                 <option value="square">square</option>
                 <option value="sawtooth">sawtooth</option>
@@ -234,12 +264,23 @@
             <input type="range" id="vol-slider" min="0" max="1" step="0.05" value="0.5"
                    oninput="soundVolume=+this.value" title="Volume">
         </div>
+        <!-- GitHub Stars -->
+        <div class="ctrl-row" style="margin-top:6px">
+            <a class="github-stars-btn"
+               href="https://github.com/krittin-58/countdown-html"
+               target="_blank" rel="noopener noreferrer"
+               onclick="gaTrack('github_stars_click')"
+               title="Star on GitHub">
+                <img src="https://img.shields.io/github/stars/krittin-58/countdown-html?style=social"
+                     alt="GitHub Stars" loading="lazy" height="20">
+            </a>
+        </div>
 
         <!-- Add form -->
         <div id="add-form">
             <div class="add-tabs">
-                <button id="tab-dur"   class="tab-active" onclick="setAddMode('duration')">⏱ Duration</button>
-                <button id="tab-until"                    onclick="setAddMode('until')">📅 Until</button>
+                <button id="tab-dur"   class="tab-active" onclick="gaTrack('add_mode_change',{mode:'duration'}); setAddMode('duration')">⏱ Duration</button>
+                <button id="tab-until"                    onclick="gaTrack('add_mode_change',{mode:'until'}); setAddMode('until')">📅 Until</button>
             </div>
             <input type="text" id="new-name" placeholder="Name (optional)"><br>
             <div id="mode-duration">
@@ -250,14 +291,14 @@
             </div>
             <div style="margin-top:4px; display:flex; gap:4px; flex-wrap:wrap;">
                 <button onclick="addTimerFromForm()">▶ START</button>
-                <button onclick="savePreset()" title="Save as custom preset">💾 Save</button>
+                <button onclick="gaTrack('preset_save'); savePreset()" title="Save as custom preset">💾 Save</button>
             </div>
             <div class="preset-btns" id="builtin-presets">
-                <button onclick="setPreset(5)">5m</button>
-                <button onclick="setPreset(10)">10m</button>
-                <button onclick="setPreset(15)">15m</button>
-                <button onclick="setPreset(25)">25m 🍅</button>
-                <button onclick="setPreset(45)">45m</button>
+                <button onclick="gaTrack('preset_builtin',{minutes:5}); setPreset(5)">5m</button>
+                <button onclick="gaTrack('preset_builtin',{minutes:10}); setPreset(10)">10m</button>
+                <button onclick="gaTrack('preset_builtin',{minutes:15}); setPreset(15)">15m</button>
+                <button onclick="gaTrack('preset_builtin',{minutes:25}); setPreset(25)">25m 🍅</button>
+                <button onclick="gaTrack('preset_builtin',{minutes:45}); setPreset(45)">45m</button>
             </div>
             <div id="saved-presets-list" class="preset-btns"></div>
             <div class="add-row">
@@ -273,8 +314,8 @@
         <div id="io-section">
             <textarea id="io-textarea" placeholder="Paste JSON here to import, or click EXPORT…"></textarea>
             <div style="display:flex; gap:4px; margin-top:4px; flex-wrap:wrap;">
-                <button onclick="exportJSON()">📤 Export</button>
-                <button onclick="importJSON()">📥 Import</button>
+                <button onclick="gaTrack('export_json'); exportJSON()">📤 Export</button>
+                <button onclick="gaTrack('import_json'); importJSON()">📥 Import</button>
                 <button onclick="toggleIO()">✕</button>
             </div>
             <div id="io-error" class="form-error"></div>
@@ -292,6 +333,48 @@
     var soundTone = 'sine';
     var soundVolume = 0.5;
     var addMode = 'duration';
+
+    /* ── Google Analytics helper ── */
+    /*
+     * GA event reference (replace G-XXXXXXXXXX in <head> with your Measurement ID):
+     *
+     *  Event name              | When fired                        | Extra params
+     * ─────────────────────────┼───────────────────────────────────┼──────────────────────────────
+     *  add_timer_open          | ＋ ADD button                     |
+     *  timer_start             | ▶ START                           | mode, name, duration_ms
+     *  preset_builtin          | built-in preset clicked           | minutes
+     *  preset_saved_use        | saved preset clicked              | name, minutes
+     *  preset_save             | 💾 Save preset                    |
+     *  add_mode_change         | Duration / Until tab              | mode ("duration"|"until")
+     *  pause_all               | ⏸ ALL                            |
+     *  resume_all              | ▶ ALL                             |
+     *  controls_toggle         | HIDE                              |
+     *  fullscreen_toggle       | ⛶ FS                             | entered (true|false)
+     *  theme_change            | theme dropdown                    | theme
+     *  notification_request    | 🔔 button                         |
+     *  share_url               | 🔗 button                         |
+     *  io_panel_open           | 📋 button                         |
+     *  export_json             | 📤 Export                         |
+     *  import_json             | 📥 Import (success)               |
+     *  sound_mute_toggle       | 🔊 / 🔇 button                    | muted (true|false)
+     *  sound_tone_change       | waveform select                   | tone
+     *  timer_pause             | card ⏸ PAUSE                      | timer_id
+     *  timer_resume            | card ▶ RESUME                     | timer_id
+     *  timer_reset             | card ↺ RESET                      | timer_id
+     *  timer_delete            | card ✕                            | timer_id
+     *  timer_options_toggle    | card ⚙                            | timer_id, open (true|false)
+     *  timer_color_change      | per-timer color picker            | timer_id
+     *  timer_repeat_toggle     | auto-repeat checkbox              | timer_id, repeat (true|false)
+     *  timer_chain_set         | "Then start" select               | timer_id
+     *  timer_finished          | timer reaches zero                | timer_id, name
+     *  keyboard_shortcut       | keyboard shortcut used            | key
+     *  github_stars_click      | GitHub Stars link                 |
+     */
+    function gaTrack(eventName, params) {
+        try {
+            if (typeof gtag === 'function') gtag('event', eventName, params || {});
+        } catch(e) {}
+    }
 
     /* ── Audio ── */
     function getAudioCtx() {
@@ -319,6 +402,7 @@
         soundMuted = !soundMuted;
         document.getElementById('btn-mute').textContent = soundMuted ? '🔇' : '🔊';
         try { localStorage.soundMuted = soundMuted ? '1' : '0'; } catch(e) {}
+        gaTrack('sound_mute_toggle', { muted: soundMuted });
     }
 
     /* ── Timer model ── */
@@ -458,6 +542,7 @@
         setActiveTimer(t.id);
         saveState();
         renderCards();
+        gaTrack('timer_start', { mode: addMode, name: name, duration_ms: ms });
         document.getElementById('add-form').classList.remove('visible');
         document.getElementById('new-name').value = '';
         document.getElementById('new-repeat').checked = false;
@@ -527,6 +612,7 @@
             var btn = document.createElement('button');
             btn.textContent = (p.name ? p.name + ' ' : '') + p.minutes + 'm';
             btn.onclick = function() {
+                gaTrack('preset_saved_use', { name: p.name, minutes: p.minutes });
                 document.getElementById('new-name').value = p.name || '';
                 setPreset(p.minutes);
             };
@@ -598,17 +684,17 @@
             '<div class="timer-display">--:--</div>' +
             '<div class="progress-track"><div class="progress-fill" style="width:100%"></div></div>' +
             '<div class="timer-btns">' +
-                '<button class="btn-pr" onclick="togglePause('+t.id+')">⏸ PAUSE</button>' +
-                '<button onclick="resetTimer('+t.id+')">↺ RESET</button>' +
-                '<button onclick="removeTimer('+t.id+')">✕</button>' +
-                '<button onclick="toggleExtras('+t.id+')" title="Per-timer options">⚙</button>' +
+                '<button class="btn-pr" onclick="gaTrack(findTimer('+t.id+')&&findTimer('+t.id+').isPaused?\'timer_resume\':\'timer_pause\',{timer_id:'+t.id+'}); togglePause('+t.id+')">⏸ PAUSE</button>' +
+                '<button onclick="gaTrack(\'timer_reset\',{timer_id:'+t.id+'}); resetTimer('+t.id+')">↺ RESET</button>' +
+                '<button onclick="gaTrack(\'timer_delete\',{timer_id:'+t.id+'}); removeTimer('+t.id+')">✕</button>' +
+                '<button onclick="gaTrack(\'timer_options_toggle\',{timer_id:'+t.id+'}); toggleExtras('+t.id+')" title="Per-timer options">⚙</button>' +
             '</div>' +
             '<div class="timer-extras">' +
                 '<label title="Accent colour">🎨 <input type="color" value="' +
-                    escHtml(safeColor || '#44ff44') + '" onchange="setTimerColor('+t.id+',this.value)"></label>' +
+                    escHtml(safeColor || '#44ff44') + '" onchange="gaTrack(\'timer_color_change\',{timer_id:'+t.id+'}); setTimerColor('+t.id+',this.value)"></label>' +
                 '<label><input type="checkbox" class="card-repeat-chk"' +
-                    (t.repeat ? ' checked' : '') + ' onchange="setTimerRepeat('+t.id+',this.checked)"> Auto-repeat 🔁</label>' +
-                '<label>Then start: <select class="card-next-sel" onchange="setTimerNextId('+t.id+',this.value)"></select></label>' +
+                    (t.repeat ? ' checked' : '') + ' onchange="gaTrack(\'timer_repeat_toggle\',{timer_id:'+t.id+',repeat:this.checked}); setTimerRepeat('+t.id+',this.checked)"> Auto-repeat 🔁</label>' +
+                '<label>Then start: <select class="card-next-sel" onchange="gaTrack(\'timer_chain_set\',{timer_id:'+t.id+'}); setTimerNextId('+t.id+',this.value)"></select></label>' +
             '</div>';
         initCardDrag(div);
         return div;
@@ -654,6 +740,7 @@
                 t.finishedAt  = Date.now();
                 if (!t.hasPlayedSound) { t.hasPlayedSound = true; playBeep(); }
                 sendNotification(t.name);
+                gaTrack('timer_finished', { timer_id: t.id, name: t.name });
 
                 if (t.repeat) {
                     // Auto-restart: count completion and begin again
@@ -748,8 +835,10 @@
     function toggleFullscreen() {
         if (!document.fullscreenElement) {
             document.documentElement.requestFullscreen && document.documentElement.requestFullscreen();
+            gaTrack('fullscreen_toggle', { entered: true });
         } else {
             document.exitFullscreen && document.exitFullscreen();
+            gaTrack('fullscreen_toggle', { entered: false });
         }
     }
     document.addEventListener('fullscreenchange', function() {
@@ -994,12 +1083,13 @@
             case ' ':
             case 'Spacebar':
                 e.preventDefault();
-                if (t) togglePause(t.id);
+                if (t) { gaTrack('keyboard_shortcut', { key: 'Space' }); togglePause(t.id); }
                 break;
             case 'r': case 'R':
-                if (t) resetTimer(t.id);
+                if (t) { gaTrack('keyboard_shortcut', { key: 'R' }); resetTimer(t.id); }
                 break;
             case 'f': case 'F':
+                gaTrack('keyboard_shortcut', { key: 'F' });
                 toggleFullscreen();
                 break;
             case 'Escape':
@@ -1008,16 +1098,18 @@
                 if (af.classList.contains('visible')) {
                     af.classList.remove('visible');
                 } else {
+                    gaTrack('keyboard_shortcut', { key: 'Escape' });
                     toggleControls();
                 }
                 break;
             case 'Delete':
                 e.preventDefault();
-                if (t) removeTimer(t.id);
+                if (t) { gaTrack('keyboard_shortcut', { key: 'Delete' }); removeTimer(t.id); }
                 break;
             case 'ArrowRight':
                 if (timers.length > 1) {
                     e.preventDefault();
+                    gaTrack('keyboard_shortcut', { key: 'ArrowRight' });
                     var ri = timers.findIndex(function(x){ return x.id === activeTimerId; });
                     setActiveTimer(timers[(ri + 1) % timers.length].id);
                 }
@@ -1025,6 +1117,7 @@
             case 'ArrowLeft':
                 if (timers.length > 1) {
                     e.preventDefault();
+                    gaTrack('keyboard_shortcut', { key: 'ArrowLeft' });
                     var li = timers.findIndex(function(x){ return x.id === activeTimerId; });
                     setActiveTimer(timers[(li - 1 + timers.length) % timers.length].id);
                 }
