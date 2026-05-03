@@ -545,9 +545,11 @@
             .replace(/&/g,'&amp;').replace(/</g,'&lt;')
             .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
-    /* Only accept CSS hex colors (#rgb / #rrggbb / #rrggbbaa) to prevent injection */
+    /* Only accept CSS hex colors (#rgb / #rrggbb / #rgba / #rrggbbaa) to prevent injection */
     function sanitizeColor(c) {
-        return typeof c === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(c) ? c : '';
+        return typeof c === 'string' &&
+               /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(c)
+               ? c : '';
     }
     function fmtMs(ms) {
         var m = Math.floor(ms / 60000);
@@ -682,10 +684,9 @@
             // Completions badge
             if (compEl) {
                 if (t.completions > 0) {
-                    var emoji = t.completions <= 20
+                    compEl.textContent = t.completions <= 10
                         ? '🍅'.repeat(t.completions)
                         : '🍅×' + t.completions;
-                    compEl.textContent = emoji;
                 } else {
                     compEl.textContent = '';
                 }
@@ -868,7 +869,11 @@
 
     /* ── Notifications ── */
     function requestNotificationPermission() {
-        if (!('Notification' in window)) { alert('Notifications not supported in this browser.'); return; }
+        if (!('Notification' in window)) {
+            var btn = document.getElementById('btn-notify');
+            if (btn) { btn.textContent = '🔔✗'; btn.title = 'Notifications not supported in this browser'; }
+            return;
+        }
         Notification.requestPermission().then(function(perm) {
             updateNotifyBtn(perm);
         });
@@ -903,12 +908,17 @@
                 setTimeout(function(){ btn.textContent = orig; }, 2000);
             }
         }
+        function showFallback() {
+            // Display URL in the I/O panel as a fallback
+            document.getElementById('io-textarea').value = url;
+            document.getElementById('io-section').classList.add('open');
+            var errEl = document.getElementById('io-error');
+            if (errEl) errEl.textContent = 'Select and copy the share URL above.';
+        }
         if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(url).then(showCopied).catch(function() {
-                prompt('Copy this URL to share your timers:', url);
-            });
+            navigator.clipboard.writeText(url).then(showCopied).catch(showFallback);
         } else {
-            prompt('Copy this URL to share your timers:', url);
+            showFallback();
         }
     }
     function toggleIO() {
