@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://krittin-58.github.io/countdown-html/sitemap.xml
+Sitemap: https://countdown-html.vercel.app/sitemap.xml
