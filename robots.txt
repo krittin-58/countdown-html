@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://krittin-58.github.io/countdown-html/sitemap.xml
