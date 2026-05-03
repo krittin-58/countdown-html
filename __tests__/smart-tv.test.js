@@ -128,6 +128,12 @@ describe('file initialisation', () => {
         expect(firstCall[1]).toBe('r+');
     });
 
+    test('uses curWidget.id as part of the database file name', () => {
+        const { openCommonFileSpy } = runPolyfill();
+        const fileName = openCommonFileSpy.mock.calls[0][0];
+        expect(fileName).toContain('test-widget-1');
+    });
+
     test('creates a new file with "{}" when the DB file does not exist', () => {
         const { writeAllSpy } = runPolyfill({ fileExists: false });
         expect(writeAllSpy).toHaveBeenCalledWith('{}');
@@ -246,5 +252,33 @@ describe('localStorage.saveFile', () => {
         expect(typeof written.saveFile).toBe('undefined');
         // But the data key should be present.
         expect(written.myKey).toBe('myVal');
+    });
+
+    test('closes the file after writing', () => {
+        const { sandbox, closeCommonFileSpy } = runPolyfill({ executeSaveImmediately: false });
+        sandbox.localStorage.setItem('a', '1'); // marks changed = true
+        closeCommonFileSpy.mockClear();         // ignore the init-time close
+        sandbox.localStorage.saveFile(false);
+        expect(closeCommonFileSpy).toHaveBeenCalled();
+    });
+
+    test('resets the changed flag so a subsequent saveFile call is a no-op', () => {
+        const { sandbox, writeAllSpy } = runPolyfill({ executeSaveImmediately: false });
+        sandbox.localStorage.setItem('k', 'v'); // changed = true
+        sandbox.localStorage.saveFile(false);   // saves, resets changed
+        writeAllSpy.mockClear();
+        sandbox.localStorage.saveFile(false);   // changed is now false → no write
+        expect(writeAllSpy).not.toHaveBeenCalled();
+    });
+
+    test('delay = undefined falls through to a direct (non-deferred) save', () => {
+        // When saveFile() is called without any argument, `delay` is undefined.
+        // The condition `typeof delay != 'undefined' && delay` is false, so the
+        // save runs synchronously without setTimeout.
+        const { sandbox, writeAllSpy } = runPolyfill({ executeSaveImmediately: false });
+        sandbox.localStorage.setItem('x', '1'); // changed = true
+        writeAllSpy.mockClear();
+        sandbox.localStorage.saveFile();         // no argument → undefined delay
+        expect(writeAllSpy).toHaveBeenCalled();
     });
 });

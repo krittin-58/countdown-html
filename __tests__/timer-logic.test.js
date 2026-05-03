@@ -26,10 +26,14 @@ const FIXED_NOW = 1_700_000_000_000;
 /**
  * Create a fresh JSDOM window running the countdown app.
  *
- * @param {string} searchStr  Optional URL search string, e.g. '?minutes=5'
- * @returns {Window}          The jsdom Window object
+ * @param {string} searchStr      Optional URL search string, e.g. '?minutes=5'
+ * @param {object} preloadStorage Key/value pairs written into localStorage
+ *                                *before* the inline scripts execute, so that
+ *                                initialisation code (theme, loadState, etc.)
+ *                                sees them on first run.
+ * @returns {Window}              The jsdom Window object
  */
-function loadApp(searchStr = '') {
+function loadApp(searchStr = '', preloadStorage = {}) {
     const html = fs.readFileSync(HTML_PATH, 'utf-8');
     // Note: the external smart-tv.js <script> tag in the HTML is silently ignored
     // by jsdom when the `resources` option is not set to 'usable'.
@@ -40,6 +44,11 @@ function loadApp(searchStr = '') {
         beforeParse(win) {
             // Pin Date.now() so every endTime calculation is deterministic.
             win.Date.now = () => FIXED_NOW;
+
+            // Pre-populate localStorage so init code sees the values.
+            for (const [key, val] of Object.entries(preloadStorage)) {
+                win.localStorage.setItem(key, val);
+            }
 
             // Provide a no-op AudioContext so playBeep() does not throw.
             win.AudioContext = class MockAudioContext {
@@ -390,6 +399,14 @@ describe('removeTimer', () => {
     test('does not throw for a non-existent id', () => {
         expect(() => win.removeTimer(99_999)).not.toThrow();
     });
+
+    test('removes the DOM card for the deleted timer', () => {
+        const t = win.makeTimer('', 1);
+        win.timers.push(t);
+        win.renderCards(); // create the card
+        win.removeTimer(t.id);
+        expect(win.document.querySelector(`[data-id="${t.id}"]`)).toBeNull();
+    });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -534,6 +551,13 @@ describe('addTimerFromForm', () => {
         win.addTimerFromForm();
         expect(win.document.getElementById('add-form').classList.contains('visible')).toBe(false);
     });
+
+    test('creates a DOM card for the newly added timer', () => {
+        fill('NewCard', 5);
+        win.addTimerFromForm();
+        const lastTimer = win.timers[win.timers.length - 1];
+        expect(win.document.querySelector(`[data-id="${lastTimer.id}"]`)).not.toBeNull();
+    });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -575,6 +599,23 @@ describe('buildCard', () => {
     test('contains a pause button (.btn-pr)', () => {
         const t = win.makeTimer('', 1);
         expect(win.buildCard(t).querySelector('.btn-pr')).not.toBeNull();
+    });
+
+    test('initial timer-display shows "--:--" before updateCards runs', () => {
+        const t = win.makeTimer('', 1);
+        expect(win.buildCard(t).querySelector('.timer-display').textContent).toBe('--:--');
+    });
+
+    test('contains a reset button', () => {
+        const t = win.makeTimer('', 1);
+        const buttons = Array.from(win.buildCard(t).querySelectorAll('button'));
+        expect(buttons.some(b => b.textContent.includes('RESET'))).toBe(true);
+    });
+
+    test('contains a remove (✕) button', () => {
+        const t = win.makeTimer('', 1);
+        const buttons = Array.from(win.buildCard(t).querySelectorAll('button'));
+        expect(buttons.some(b => b.textContent.includes('✕'))).toBe(true);
     });
 });
 
@@ -622,6 +663,17 @@ describe('renderCards', () => {
         win.timers.push(win.makeTimer('A', 1), win.makeTimer('B', 1));
         win.renderCards();
         expect(win.document.getElementById('timers').classList.contains('solo')).toBe(false);
+    });
+
+    test('does not add "solo" class when there are no timers', () => {
+        win.renderCards(); // timers is empty (cleared in beforeEach)
+        expect(win.document.getElementById('timers').classList.contains('solo')).toBe(false);
+    });
+
+    test('creates a card for every timer in the array', () => {
+        win.timers.push(win.makeTimer('A', 1), win.makeTimer('B', 2), win.makeTimer('C', 3));
+        win.renderCards();
+        expect(win.document.querySelectorAll('.timer-card').length).toBe(3);
     });
 });
 
@@ -756,6 +808,54 @@ describe('updateCards', () => {
         win.updateCards();
         expect(fill(t.id).className).not.toContain('urgent');
     });
+
+    test('urgent threshold boundary: exactly 60 000 ms remaining is NOT urgent', () => {
+        const t = addTimer('', 2);
+        t.totalMs = 120_000;
+        t.endTime = FIXED_NOW + 60_000; // exactly 60 s
+        win.updateCards();
+        expect(display(t.id).className).not.toContain('urgent');
+        expect(display(t.id).textContent).toContain(':'); // MM:SS format
+    });
+
+    test('urgent threshold boundary: 59 999 ms remaining IS urgent', () => {
+        const t = addTimer('', 1);
+        t.endTime = FIXED_NOW + 59_999;
+        win.updateCards();
+        expect(display(t.id).className).toContain('urgent');
+    });
+
+    test('exactly 0 ms remaining is treated as finished', () => {
+        const t = addTimer('', 1);
+        t.endTime = FIXED_NOW; // endTime === now → 0 remaining
+        win.updateCards();
+        expect(display(t.id).textContent).toBe('00:00');
+        expect(display(t.id).className).toContain('finished');
+    });
+
+    test('does not crash when a timer has no corresponding DOM card', () => {
+        const t = win.makeTimer('', 1);
+        win.timers.push(t);
+        // Intentionally skip renderCards() so no card exists in the DOM
+        expect(() => win.updateCards()).not.toThrow();
+    });
+
+    test('urgent display pads single-digit seconds with a leading zero', () => {
+        const t = addTimer('', 1);
+        t.endTime = FIXED_NOW + 5_000; // 5 seconds
+        win.updateCards();
+        expect(display(t.id).textContent).toBe('05');
+    });
+
+    test('playBeep is called only once even when updateCards is called multiple times', () => {
+        const t = addTimer('', 1);
+        t.endTime = FIXED_NOW - 1_000; // already expired
+        let beepCount = 0;
+        win.playBeep = () => { beepCount++; };
+        win.updateCards(); // first call → beep should fire
+        win.updateCards(); // second call → beep should NOT fire again
+        expect(beepCount).toBe(1);
+    });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -885,6 +985,17 @@ describe('saveState and loadState', () => {
         expect(saved[0].remainingMs).toBe(30_000);
     });
 
+    test('saveState computes remainingMs from endTime for a running timer (ignores stale .remainingMs)', () => {
+        const t = win.makeTimer('Running', 1);
+        t.isPaused    = false;
+        t.endTime     = FIXED_NOW + 30_000;
+        t.remainingMs = 999_999; // deliberately stale / wrong
+        win.timers.push(t);
+        win.saveState();
+        const saved = JSON.parse(win.localStorage.timersState);
+        expect(saved[0].remainingMs).toBe(30_000); // endTime - Date.now()
+    });
+
     test('loadState restores timers and returns true', () => {
         win.timers.push(win.makeTimer('Loaded', 3));
         win.saveState();
@@ -926,6 +1037,24 @@ describe('saveState and loadState', () => {
     test('loadState returns false for malformed JSON in localStorage', () => {
         win.localStorage.timersState = 'NOT_JSON';
         expect(win.loadState()).toBe(false);
+    });
+
+    test('loadState restores nextId from localStorage', () => {
+        const stateData = [{ id: 5, name: 'T', totalMs: 60_000, remainingMs: 60_000,
+                             isPaused: false, hasFinished: false, hasPlayedSound: false }];
+        win.localStorage.timersState = JSON.stringify(stateData);
+        win.localStorage.nextId      = '10';
+        win.loadState();
+        expect(win.nextId).toBe(10);
+    });
+
+    test('loadState falls back to maxTimerId()+1 when localStorage.nextId is absent', () => {
+        const stateData = [{ id: 7, name: 'T', totalMs: 60_000, remainingMs: 60_000,
+                             isPaused: false, hasFinished: false, hasPlayedSound: false }];
+        win.localStorage.timersState = JSON.stringify(stateData);
+        // No nextId stored
+        win.loadState();
+        expect(win.nextId).toBe(8); // maxTimerId() + 1
     });
 });
 
@@ -1015,6 +1144,12 @@ describe('handleUrlParams', () => {
         const found = win.timers.find(t => t.totalMs === 90_000);
         expect(found).toBeDefined();
     });
+
+    test('decodes percent-encoded characters in the name parameter', () => {
+        const win = loadApp('?minutes=5&name=My%20Timer');
+        const found = win.timers.find(t => t.name === 'My Timer');
+        expect(found).toBeDefined();
+    });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1041,5 +1176,27 @@ describe('initial render', () => {
     test('theme-select defaults to empty string (Dark theme)', () => {
         const win = loadApp();
         expect(win.document.getElementById('theme-select').value).toBe('');
+    });
+
+    test('does NOT show the add-form when timers were saved in localStorage', () => {
+        const stateData = JSON.stringify([{
+            id: 1, name: 'Saved', totalMs: 60_000, remainingMs: 30_000,
+            isPaused: false, hasFinished: false, hasPlayedSound: false
+        }]);
+        const win = loadApp('', { timersState: stateData, nextId: '2' });
+        const form = win.document.getElementById('add-form');
+        expect(form.classList.contains('visible')).toBe(false);
+    });
+
+    test('does NOT show the add-form when a URL-param timer was created', () => {
+        const win = loadApp('?minutes=5');
+        const form = win.document.getElementById('add-form');
+        expect(form.classList.contains('visible')).toBe(false);
+    });
+
+    test('applies a saved theme to <html> and syncs the theme-select on startup', () => {
+        const win = loadApp('', { theme: 'ocean' });
+        expect(win.document.documentElement.dataset.theme).toBe('ocean');
+        expect(win.document.getElementById('theme-select').value).toBe('ocean');
     });
 });
