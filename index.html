@@ -476,7 +476,13 @@
         var t = findTimer(id);
         if (!t) return;
         setActiveTimer(id);
-        if (t.isPaused) resumeTimer(id); else pauseTimer(id);
+        if (t.isPaused) {
+            gaTrack('timer_resume', { timer_id: id });
+            resumeTimer(id);
+        } else {
+            gaTrack('timer_pause', { timer_id: id });
+            pauseTimer(id);
+        }
     }
     function pauseAll() {
         timers.forEach(function(t){ pauseTimer(t.id); });
@@ -678,23 +684,25 @@
 
         var safeColor  = sanitizeColor(t.color);
         var labelColor = safeColor ? ' style="color:' + safeColor + '"' : '';
+        // Coerce to integer so it is safe to embed directly in inline event handlers
+        var tid = parseInt(t.id, 10);
         div.innerHTML =
             '<div class="timer-label"' + labelColor + '>' + escHtml(t.name) + '</div>' +
             '<div class="timer-completions"></div>' +
             '<div class="timer-display">--:--</div>' +
             '<div class="progress-track"><div class="progress-fill" style="width:100%"></div></div>' +
             '<div class="timer-btns">' +
-                '<button class="btn-pr" onclick="gaTrack(findTimer('+t.id+')&&findTimer('+t.id+').isPaused?\'timer_resume\':\'timer_pause\',{timer_id:'+t.id+'}); togglePause('+t.id+')">⏸ PAUSE</button>' +
-                '<button onclick="gaTrack(\'timer_reset\',{timer_id:'+t.id+'}); resetTimer('+t.id+')">↺ RESET</button>' +
-                '<button onclick="gaTrack(\'timer_delete\',{timer_id:'+t.id+'}); removeTimer('+t.id+')">✕</button>' +
-                '<button onclick="gaTrack(\'timer_options_toggle\',{timer_id:'+t.id+'}); toggleExtras('+t.id+')" title="Per-timer options">⚙</button>' +
+                '<button class="btn-pr" onclick="togglePause('+tid+')">⏸ PAUSE</button>' +
+                '<button onclick="gaTrack(\'timer_reset\',{timer_id:'+tid+'}); resetTimer('+tid+')">↺ RESET</button>' +
+                '<button onclick="gaTrack(\'timer_delete\',{timer_id:'+tid+'}); removeTimer('+tid+')">✕</button>' +
+                '<button onclick="gaTrack(\'timer_options_toggle\',{timer_id:'+tid+'}); toggleExtras('+tid+')" title="Per-timer options">⚙</button>' +
             '</div>' +
             '<div class="timer-extras">' +
                 '<label title="Accent colour">🎨 <input type="color" value="' +
-                    escHtml(safeColor || '#44ff44') + '" onchange="gaTrack(\'timer_color_change\',{timer_id:'+t.id+'}); setTimerColor('+t.id+',this.value)"></label>' +
+                    escHtml(safeColor || '#44ff44') + '" onchange="gaTrack(\'timer_color_change\',{timer_id:'+tid+'}); setTimerColor('+tid+',this.value)"></label>' +
                 '<label><input type="checkbox" class="card-repeat-chk"' +
-                    (t.repeat ? ' checked' : '') + ' onchange="gaTrack(\'timer_repeat_toggle\',{timer_id:'+t.id+',repeat:this.checked}); setTimerRepeat('+t.id+',this.checked)"> Auto-repeat 🔁</label>' +
-                '<label>Then start: <select class="card-next-sel" onchange="gaTrack(\'timer_chain_set\',{timer_id:'+t.id+'}); setTimerNextId('+t.id+',this.value)"></select></label>' +
+                    (t.repeat ? ' checked' : '') + ' onchange="gaTrack(\'timer_repeat_toggle\',{timer_id:'+tid+',repeat:this.checked}); setTimerRepeat('+tid+',this.checked)"> Auto-repeat 🔁</label>' +
+                '<label>Then start: <select class="card-next-sel" onchange="gaTrack(\'timer_chain_set\',{timer_id:'+tid+'}); setTimerNextId('+tid+',this.value)"></select></label>' +
             '</div>';
         initCardDrag(div);
         return div;
@@ -865,7 +873,7 @@
     function stateToTimer(s) {
         var endTime = s.isPaused ? Date.now() : Date.now() + (s.remainingMs || 0);
         return {
-            id: s.id, name: s.name || '', totalMs: s.totalMs,
+            id: +s.id, name: s.name || '', totalMs: s.totalMs,
             remainingMs: s.remainingMs || 0,
             endTime: endTime,
             isPaused: !!s.isPaused, hasFinished: !!s.hasFinished, hasPlayedSound: !!s.hasPlayedSound,
