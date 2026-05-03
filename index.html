@@ -1,5 +1,11 @@
 <!doctype html>
-<title>Countdown</title>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Countdown Timer</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#112233">
 <style>
     :root {
         --bg-start: #123;
@@ -14,7 +20,15 @@
         --btn-border: #555453;
         --bar-bg: rgba(255,255,255,0.15);
         --bar-fill: #4f4;
+        --modal-bg: #2a2928;
+        --input-bg: #111;
+        --input-border: #555;
+        --input-fg: #fff;
+        --timer-scale: 1;
     }
+
+    /* ── Themes ── */
+    [data-theme="light"]  { --bg-start:#e8f4f8; --bg-end:#cce0ee; --fg:#111; --accent:#0055bb; --danger:#cc2200; --warn:#886600; --panel-bg:#f5f5f5; --panel-border:#bbb; --btn-bg:#fff; --btn-border:#aaa; --bar-bg:rgba(0,0,0,0.1); --bar-fill:#0055bb; --modal-bg:#fff; --input-bg:#fff; --input-border:#aaa; --input-fg:#111; }
     [data-theme="ocean"]  { --bg-start:#011a2e; --bg-end:#023858; --accent:#0bf; --bar-fill:#0bf; }
     [data-theme="sunset"] { --bg-start:#3a0a0a; --bg-end:#8b3a00; --accent:#ffb; --bar-fill:#ffb; }
     [data-theme="forest"] { --bg-start:#0a1a0a; --bg-end:#0d3b1a; --accent:#8f8; --bar-fill:#8f8; }
@@ -25,8 +39,22 @@
         background: linear-gradient(to bottom, var(--bg-start), var(--bg-end));
         color: var(--fg);
         font: 18px Cousine, Menlo, Monaco, monospace;
-        transition: background 0.5s;
+        transition: background 0.5s, color 0.3s;
     }
+
+    /* ── OBS transparent mode ── */
+    body.obs-mode { background: transparent !important; }
+    body.obs-mode #control { display: none; }
+
+    /* ── Clock ── */
+    #clock {
+        position: fixed; top: 20px; right: 20px;
+        font-size: 28px; color: var(--accent);
+        z-index: 50; display: none;
+        text-shadow: 0 0 10px rgba(0,0,0,0.6);
+        pointer-events: none;
+    }
+    #clock.visible { display: block; }
 
     /* ── Timers grid ── */
     #timers {
@@ -42,7 +70,6 @@
         flex: 1 1 280px; min-width: 280px; max-width: 560px;
         padding: 16px; box-sizing: border-box;
     }
-    /* Solo timer fills the screen */
     #timers.solo .timer-card { min-width:100%; min-height:80vh; }
 
     .timer-label {
@@ -50,11 +77,11 @@
         color: var(--accent); min-height: 28px;
     }
     .timer-display {
-        font-size: clamp(60px, 14vw, 200px);
+        font-size: calc(clamp(60px, 14vw, 200px) * var(--timer-scale));
         line-height: 1.1;
         transition: color 0.3s;
     }
-    .timer-display.urgent   { color: var(--danger); font-size: clamp(80px, 20vw, 240px); }
+    .timer-display.urgent   { color: var(--danger); font-size: calc(clamp(80px, 20vw, 240px) * var(--timer-scale)); }
     .timer-display.finished { color: var(--warn); }
 
     /* Progress bar */
@@ -69,10 +96,12 @@
     }
     .progress-fill.urgent { background: var(--danger); }
 
-    /* Timer card buttons */
-    .timer-btns { display:flex; gap:6px; margin-top:8px; }
+    .pomo-badge { font-size: 13px; color: var(--accent); margin-top: 2px; min-height: 18px; }
 
-    /* Buttons */
+    /* Timer card buttons */
+    .timer-btns { display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; justify-content:center; }
+
+    /* Buttons & selects */
     button, select {
         background: var(--btn-bg);
         border: 1px solid var(--btn-border);
@@ -80,9 +109,11 @@
         color: var(--accent);
         font-family: inherit; font-size: 16px;
         cursor: pointer;
+        transition: border-color 0.15s;
     }
     button:hover, select:hover { border-color: var(--accent); }
     button:disabled { opacity: 0.35; cursor: default; }
+    button.active { border-color: var(--accent); }
 
     /* Control panel */
     #control {
@@ -91,86 +122,309 @@
         border: 2px solid var(--panel-border);
         padding: 8px; z-index: 100;
         transition: opacity 0.15s;
+        max-width: calc(100vw - 44px);
     }
     #ctrl-row { display:flex; flex-wrap:wrap; gap:4px; align-items:center; }
 
+    /* Sound + sliders row */
+    #options-row {
+        display: flex; flex-wrap: wrap; gap:6px; align-items:center;
+        margin-top: 6px;
+    }
+    #options-row label { font-size: 14px; }
+    #vol-slider, #font-size-slider {
+        width: 72px; cursor: pointer;
+        accent-color: var(--accent);
+        vertical-align: middle;
+    }
+
+    /* Add form */
     #add-form { margin-top:8px; display:none; }
     #add-form.visible { display:block; }
     #add-form input[type=text],
     #add-form input[type=number] {
-        background:#111; border:1px solid #555; color:#fff;
-        font-family:inherit; font-size:16px;
-        padding:3px 6px; width:140px;
+        background: var(--input-bg);
+        border: 1px solid var(--input-border);
+        color: var(--input-fg);
+        font-family: inherit; font-size: 16px;
+        padding: 3px 6px; width: 140px;
     }
     .preset-btns { display:flex; gap:4px; flex-wrap:wrap; margin-top:4px; }
     .preset-btns button { font-size:14px; padding:2px 6px; margin:0; }
+    .preset-delete { font-size:11px; padding:1px 4px; margin:0; color:var(--danger); }
+
+    /* Sets panel */
+    #sets-panel { margin-top:8px; display:none; }
+    #sets-panel.visible { display:block; }
+    #sets-list { display:flex; flex-wrap:wrap; gap:4px; margin-top:4px; }
+    .set-delete { font-size:11px; color:var(--danger); padding:1px 4px; }
+
+    /* Keyboard shortcuts hint */
+    #shortcuts-hint {
+        font-size: 11px; color: var(--panel-border);
+        margin-top: 6px; line-height: 1.6;
+    }
 
     /* Hidden-controls mode */
-    .controls-hidden #control      { opacity:0; pointer-events:none; }
-    .controls-hidden .timer-btns   { display:none; }
-    .controls-hidden .timer-label  { display:none; }
+    .controls-hidden #control       { opacity:0; pointer-events:none; }
+    .controls-hidden .timer-btns    { display:none; }
+    .controls-hidden .timer-label   { display:none; }
     .controls-hidden .progress-track { display:none; }
-    .controls-hidden *             { cursor:none !important; }
-</style>
-<body>
-    <div id="timers" onclick="onTimersClick(event)"></div>
+    .controls-hidden .pomo-badge    { display:none; }
+    .controls-hidden *              { cursor:none !important; }
+    .controls-hidden #clock         { font-size: 40px; }
 
-    <div id="control">
+    /* ── Modals ── */
+    .modal-overlay {
+        position: fixed; inset: 0;
+        background: rgba(0,0,0,0.75);
+        display: flex; align-items: center; justify-content: center;
+        z-index: 200;
+    }
+    .modal-box {
+        background: var(--modal-bg);
+        border: 2px solid var(--panel-border);
+        padding: 16px; max-width: 580px; width: 92vw;
+        max-height: 82vh; overflow-y: auto;
+        box-sizing: border-box;
+    }
+    .modal-box h2 { margin: 0 0 12px; color: var(--accent); font-size: 20px; }
+    .modal-close { float:right; margin: -2px -2px 0 0; }
+    .history-entry {
+        padding: 5px 0; border-bottom: 1px solid var(--panel-border);
+        font-size: 15px;
+    }
+    .history-entry:last-child { border-bottom: none; }
+    .stats-summary { font-size: 18px; margin-bottom: 12px; color: var(--accent); }
+
+    /* Textarea / copy box */
+    .copy-box {
+        width: 100%; background: var(--input-bg); border: 1px solid var(--input-border);
+        color: var(--input-fg); font-family: inherit; font-size: 13px;
+        padding: 5px; box-sizing: border-box; resize: none;
+    }
+
+    /* Notification banner */
+    #notif-banner {
+        position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%);
+        background: var(--panel-bg); border: 1px solid var(--panel-border);
+        padding: 8px 14px; z-index: 150; display: none;
+        font-size: 14px; text-align: center; white-space: nowrap;
+    }
+    #notif-banner.visible { display: block; }
+</style>
+</head>
+<body>
+
+    <!-- Current clock -->
+    <div id="clock" aria-live="polite" aria-label="Current time"></div>
+
+    <!-- Timers container -->
+    <div id="timers" onclick="onTimersClick(event)" role="main" aria-label="Timers"></div>
+
+    <!-- Control panel -->
+    <div id="control" role="navigation" aria-label="Timer controls">
         <div id="ctrl-row">
-            <button onclick="toggleAddForm()">＋ ADD</button>
-            <button onclick="toggleControls()">HIDE</button>
-            <button id="btn-fs" onclick="toggleFullscreen()">⛶ FS</button>
-            <select id="theme-select" onchange="setTheme(this.value)">
+            <button onclick="toggleAddForm()" title="Add timer  [N]" aria-label="Add timer">＋ ADD</button>
+            <button onclick="toggleSetsPanel()" title="Timer sets" aria-label="Timer sets">⊞ SETS</button>
+            <button onclick="toggleControls()" title="Hide/show controls  [Esc]" aria-label="Toggle controls">HIDE</button>
+            <button id="btn-fs" onclick="toggleFullscreen()" title="Fullscreen  [F]" aria-label="Toggle fullscreen">⛶ FS</button>
+            <button id="btn-pomo" onclick="startPomodoro()" title="Start Pomodoro session" aria-label="Start Pomodoro">🍅 POMO</button>
+            <button id="btn-seq" onclick="toggleSequential()" title="Sequential mode — start next timer automatically" aria-label="Toggle sequential mode">↕ SEQ</button>
+            <button onclick="showShare()" title="Share / Embed / OBS" aria-label="Share">🔗 SHARE</button>
+            <button onclick="showStats()" title="Session history & focus time" aria-label="Statistics">📊 STATS</button>
+            <button id="btn-clock" onclick="toggleClock()" title="Toggle clock display" aria-label="Toggle clock">⊙ CLOCK</button>
+            <select id="theme-select" onchange="setTheme(this.value)" aria-label="Choose theme">
                 <option value="">Dark</option>
+                <option value="light">Light</option>
                 <option value="ocean">Ocean</option>
                 <option value="sunset">Sunset</option>
                 <option value="forest">Forest</option>
                 <option value="purple">Purple</option>
             </select>
         </div>
+
+        <!-- Sound / Volume / Font-size row -->
+        <div id="options-row">
+            <select id="sound-select" onchange="setSound(this.value)" aria-label="Alarm sound">
+                <option value="beep">🔔 Beep</option>
+                <option value="bell">🔕 Bell</option>
+                <option value="chime">🎵 Chime</option>
+                <option value="silent">🔇 Silent</option>
+            </select>
+            <label for="vol-slider" title="Volume">🔊</label>
+            <input type="range" id="vol-slider" min="0" max="1" step="0.05" value="0.5"
+                   oninput="setVolume(this.value)" aria-label="Volume">
+            <label for="font-size-slider" title="Timer font size">Aa</label>
+            <input type="range" id="font-size-slider" min="0.5" max="2" step="0.1" value="1"
+                   oninput="setFontScale(this.value)" aria-label="Timer font size">
+        </div>
+
+        <!-- Add timer form -->
         <div id="add-form">
-            <input type="text"   id="new-name"    placeholder="Timer name (optional)"><br>
-            <input type="number" id="new-minutes" placeholder="Minutes" min="0.1" step="0.5" value="25">
-            <button onclick="addTimerFromForm()">▶ START</button>
-            <div class="preset-btns">
-                <button onclick="setPreset(5)">5m</button>
-                <button onclick="setPreset(10)">10m</button>
-                <button onclick="setPreset(15)">15m</button>
-                <button onclick="setPreset(25)">25m 🍅</button>
-                <button onclick="setPreset(45)">45m</button>
+            <input type="text"   id="new-name"    placeholder="Timer name (optional)"
+                   aria-label="Timer name" onkeydown="if(event.key==='Enter')addTimerFromForm()"><br>
+            <input type="number" id="new-minutes" placeholder="Minutes" min="0.1" step="0.5" value="25"
+                   aria-label="Duration in minutes" onkeydown="if(event.key==='Enter')addTimerFromForm()">
+            <button onclick="addTimerFromForm()" aria-label="Start timer">▶ START</button>
+            <button onclick="saveCustomPreset()" title="Save name+duration as a custom preset" aria-label="Save preset">💾</button>
+            <div class="preset-btns" id="preset-btns">
+                <button onclick="setPreset(5)"  title="5 minutes">5m</button>
+                <button onclick="setPreset(10)" title="10 minutes">10m</button>
+                <button onclick="setPreset(15)" title="15 minutes">15m</button>
+                <button onclick="setPreset(25)" title="25 minutes — Pomodoro">25m 🍅</button>
+                <button onclick="setPreset(45)" title="45 minutes">45m</button>
             </div>
+        </div>
+
+        <!-- Timer sets panel -->
+        <div id="sets-panel">
+            <button onclick="saveCurrentSet()" style="font-size:14px" aria-label="Save current timers as a set">💾 Save Current Set</button>
+            <div id="sets-list" role="list" aria-label="Saved timer sets"></div>
+        </div>
+
+        <!-- Keyboard hints -->
+        <div id="shortcuts-hint">Space=pause  N=add  R=reset  F=fullscreen  Esc=hide</div>
+    </div>
+
+    <!-- Notification permission banner -->
+    <div id="notif-banner" role="status">
+        <span id="notif-text"></span>
+        <button onclick="requestNotificationPermission()" aria-label="Allow notifications">Allow</button>
+        <button onclick="dismissNotifBanner()" aria-label="Dismiss">✕</button>
+    </div>
+
+    <!-- Stats modal -->
+    <div id="stats-modal" class="modal-overlay" style="display:none"
+         role="dialog" aria-modal="true" aria-labelledby="stats-title">
+        <div class="modal-box">
+            <button class="modal-close" onclick="closeModal('stats-modal')" aria-label="Close">✕</button>
+            <h2 id="stats-title">📊 Session History</h2>
+            <div id="stats-content"></div>
+        </div>
+    </div>
+
+    <!-- Share / Embed modal -->
+    <div id="share-modal" class="modal-overlay" style="display:none"
+         role="dialog" aria-modal="true" aria-labelledby="share-title">
+        <div class="modal-box">
+            <button class="modal-close" onclick="closeModal('share-modal')" aria-label="Close">✕</button>
+            <h2 id="share-title">🔗 Share &amp; Embed</h2>
+            <p style="margin:4px 0 2px"><strong>Share URL</strong> (restores all current timers):</p>
+            <textarea id="share-url" class="copy-box" rows="2" readonly></textarea>
+            <button onclick="copyBox('share-url')" style="margin-top:4px">📋 Copy URL</button>
+
+            <p style="margin:10px 0 2px"><strong>Embed iframe</strong>:</p>
+            <textarea id="embed-code" class="copy-box" rows="3" readonly></textarea>
+            <button onclick="copyBox('embed-code')" style="margin-top:4px">📋 Copy Embed</button>
+
+            <p style="margin:10px 0 2px"><strong>OBS Browser Source</strong> (transparent background):</p>
+            <textarea id="obs-url" class="copy-box" rows="2" readonly></textarea>
+            <button onclick="copyBox('obs-url')" style="margin-top:4px">📋 Copy OBS URL</button>
         </div>
     </div>
 
     <script>
-    /* ── State ── */
-    var timers = [];
-    var nextId = 1;
-    var audioCtx = null;
+    /* ════════════════════════════════════════
+       STATE
+    ════════════════════════════════════════ */
+    var timers         = [];
+    var nextId         = 1;
+    var audioCtx       = null;
+    var volume         = 0.5;
+    var soundType      = 'beep';       // beep | bell | chime | silent
+    var sequentialMode = false;
+    var customPresets  = [];
+    var timerSets      = [];
+    var sessionHistory = [];
+    var clockVisible   = false;
+    var pomodoroState  = null;         // {round, phase, timerId}
 
-    /* ── Audio ── */
+    var POMO_WORK       = 25;
+    var POMO_SHORT      = 5;
+    var POMO_LONG       = 15;
+    var POMO_LONG_EVERY = 4;           // long break after every N rounds
+
+    /* ════════════════════════════════════════
+       AUDIO
+    ════════════════════════════════════════ */
     function getAudioCtx() {
         if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         return audioCtx;
     }
-    function playBeep() {
+    function playTone(freq, startOffset, duration, amp) {
+        var ctx  = getAudioCtx();
+        var osc  = ctx.createOscillator();
+        var gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + startOffset);
+        gain.gain.setValueAtTime(amp * volume, ctx.currentTime + startOffset);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + startOffset + duration);
+        osc.start(ctx.currentTime + startOffset);
+        osc.stop(ctx.currentTime + startOffset + duration);
+    }
+    function playBeep()  { [0, 0.35, 0.7].forEach(function(o){ playTone(880, o, 0.3, 0.5); }); }
+    function playBell()  { playTone(440, 0, 2.2, 0.7); playTone(880, 0, 0.8, 0.25); }
+    function playChime() {
+        [[261,0],[329,0.2],[392,0.4],[523,0.6]].forEach(function(n){ playTone(n[0], n[1], 0.55, 0.5); });
+    }
+    function playSound() {
+        if (soundType === 'silent') return;
         try {
-            var ctx = getAudioCtx();
-            [0, 0.35, 0.7].forEach(function(offset) {
-                var osc  = ctx.createOscillator();
-                var gain = ctx.createGain();
-                osc.connect(gain); gain.connect(ctx.destination);
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(880, ctx.currentTime + offset);
-                gain.gain.setValueAtTime(0.5, ctx.currentTime + offset);
-                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + offset + 0.3);
-                osc.start(ctx.currentTime + offset);
-                osc.stop(ctx.currentTime + offset + 0.3);
-            });
+            if      (soundType === 'bell')  playBell();
+            else if (soundType === 'chime') playChime();
+            else                            playBeep();
         } catch(e) {}
     }
+    function setVolume(v) {
+        volume = parseFloat(v);
+        try { localStorage.volume = volume; } catch(e) {}
+    }
+    function setSound(s) {
+        soundType = s;
+        try { localStorage.soundType = s; } catch(e) {}
+    }
 
-    /* ── Timer model ── */
+    /* ════════════════════════════════════════
+       BROWSER NOTIFICATIONS
+    ════════════════════════════════════════ */
+    function requestNotificationPermission() {
+        if (!('Notification' in window)) return;
+        Notification.requestPermission(function(result) {
+            dismissNotifBanner();
+            if (result === 'denied') {
+                // Show a brief hint that notifications were blocked
+                var banner = document.getElementById('notif-banner');
+                document.getElementById('notif-text').textContent = 'Notifications blocked — you can change this in browser settings.';
+                document.getElementById('notif-allow-btn').style.display = 'none';
+                banner.classList.add('visible');
+                setTimeout(dismissNotifBanner, 4000);
+            }
+        });
+        try { localStorage.notifAsked = '1'; } catch(e) {}
+    }
+    function showNotification(title, body) {
+        if (!('Notification' in window) || Notification.permission !== 'granted') return;
+        try { new Notification(title, { body: body }); } catch(e) {}
+    }
+    function maybePromptNotification() {
+        if (!('Notification' in window)) return;
+        try { if (localStorage.notifAsked) return; } catch(e) {}
+        if (Notification.permission === 'default') {
+            document.getElementById('notif-text').textContent =
+                '🔔 Allow notifications to be alerted when a timer ends. ';
+            document.getElementById('notif-banner').classList.add('visible');
+        }
+    }
+    function dismissNotifBanner() {
+        document.getElementById('notif-banner').classList.remove('visible');
+        try { localStorage.notifAsked = '1'; } catch(e) {}
+    }
+
+    /* ════════════════════════════════════════
+       TIMER MODEL
+    ════════════════════════════════════════ */
     function makeTimer(name, minutes) {
         var ms = minutes * 60000;
         return {
@@ -184,7 +438,7 @@
         return t.isPaused ? t.remainingMs : t.endTime - Date.now();
     }
     function findTimer(id) {
-        return timers.find(function(x){ return x.id===id; });
+        return timers.find(function(x){ return x.id === id; });
     }
     function maxTimerId() {
         var max = 0;
@@ -216,7 +470,8 @@
         saveState();
     }
     function removeTimer(id) {
-        timers = timers.filter(function(x){ return x.id!==id; });
+        timers = timers.filter(function(x){ return x.id !== id; });
+        if (pomodoroState && pomodoroState.timerId === id) pomodoroState = null;
         saveState();
         renderCards();
     }
@@ -226,40 +481,343 @@
         if (t.isPaused) resumeTimer(id); else pauseTimer(id);
     }
 
-    /* ── Add form ── */
+    /* ════════════════════════════════════════
+       POMODORO SESSION MANAGER
+    ════════════════════════════════════════ */
+    function startPomodoro() {
+        if (!confirm('Start a Pomodoro session?\nThis will clear any existing timers.')) return;
+        timers = [];
+        pomodoroState = { round: 1, phase: 'work' };
+        var t = makeTimer('🍅 Work #1', POMO_WORK);
+        pomodoroState.timerId = t.id;
+        timers.push(t);
+        saveState();
+        renderCards();
+        document.getElementById('add-form').classList.remove('visible');
+    }
+    function advancePomodoro() {
+        if (!pomodoroState) return;
+        var s = pomodoroState;
+        var t;
+        if (s.phase === 'work') {
+            var isLong = (s.round % POMO_LONG_EVERY === 0);
+            s.phase = isLong ? 'long break' : 'short break';
+            t = makeTimer(isLong ? '☕ Long Break' : '🌿 Short Break', isLong ? POMO_LONG : POMO_SHORT);
+        } else {
+            s.round++;
+            s.phase = 'work';
+            t = makeTimer('🍅 Work #' + s.round, POMO_WORK);
+        }
+        s.timerId = t.id;
+        timers = [t];
+        saveState();
+        renderCards();
+        showNotification('🍅 Pomodoro', 'Starting: ' + t.name);
+    }
+
+    /* ════════════════════════════════════════
+       SEQUENTIAL MODE
+    ════════════════════════════════════════ */
+    function toggleSequential() {
+        sequentialMode = !sequentialMode;
+        document.getElementById('btn-seq').classList.toggle('active', sequentialMode);
+        if (sequentialMode) {
+            timers.forEach(function(t, i){ if (i > 0 && !t.hasFinished) pauseTimer(t.id); });
+        }
+        try { localStorage.sequentialMode = sequentialMode ? '1' : ''; } catch(e) {}
+    }
+    function advanceSequential(finishedId) {
+        if (!sequentialMode) return;
+        var idx = -1;
+        timers.forEach(function(t, i){ if (t.id === finishedId) idx = i; });
+        if (idx < 0 || idx >= timers.length - 1) return;
+        var next = timers[idx + 1];
+        if (next && next.isPaused && !next.hasFinished) resumeTimer(next.id);
+    }
+
+    /* ════════════════════════════════════════
+       CUSTOM PRESETS
+    ════════════════════════════════════════ */
+    function saveCustomPreset() {
+        var name    = document.getElementById('new-name').value.trim();
+        var minutes = parseFloat(document.getElementById('new-minutes').value);
+        if (!minutes || minutes <= 0) return;
+        customPresets.push({ label: name || (minutes + 'm'), minutes: minutes });
+        savePresets();
+        renderPresets();
+    }
+    function deleteCustomPreset(idx) {
+        customPresets.splice(idx, 1);
+        savePresets();
+        renderPresets();
+    }
+    function savePresets() {
+        try { localStorage.customPresets = JSON.stringify(customPresets); } catch(e) {}
+    }
+    function loadPresets() {
+        try { var r = localStorage.customPresets; if (r) customPresets = JSON.parse(r); } catch(e) {}
+    }
+    function renderPresets() {
+        var container = document.getElementById('preset-btns');
+        // Remove old custom elements
+        var old = container.querySelectorAll('[data-custom]');
+        for (var i = 0; i < old.length; i++) old[i].remove();
+        // Add current custom presets
+        customPresets.forEach(function(p, i) {
+            var btn = document.createElement('button');
+            btn.textContent = p.label;
+            btn.dataset.custom = '1';
+            btn.title = p.minutes + ' minutes';
+            btn.onclick = (function(preset){
+                return function(){
+                    setPreset(preset.minutes);
+                    var namePart = preset.label.replace(/[\d.]+m$/, '').trim();
+                    document.getElementById('new-name').value = namePart;
+                };
+            })(p);
+            var del = document.createElement('button');
+            del.textContent = '✕';
+            del.className = 'preset-delete';
+            del.dataset.custom = '1';
+            del.title = 'Delete preset';
+            del.setAttribute('aria-label', 'Delete preset ' + p.label);
+            del.onclick = (function(idx){ return function(){ deleteCustomPreset(idx); }; })(i);
+            container.appendChild(btn);
+            container.appendChild(del);
+        });
+    }
+
+    /* ════════════════════════════════════════
+       TIMER SETS (TEMPLATES)
+    ════════════════════════════════════════ */
+    function saveCurrentSet() {
+        if (timers.length === 0) { alert('No timers to save.'); return; }
+        var name = prompt('Name for this timer set:', 'My Set');
+        if (!name) return;
+        timerSets.push({
+            name: name,
+            timers: timers.map(function(t){ return { name: t.name, minutes: t.totalMs / 60000 }; })
+        });
+        saveSets();
+        renderSets();
+    }
+    function loadSet(idx) {
+        var set = timerSets[idx];
+        if (!set) return;
+        if (timers.length > 0 && !confirm('Load "' + set.name + '"? Current timers will be cleared.')) return;
+        timers = [];
+        set.timers.forEach(function(s){ timers.push(makeTimer(s.name, s.minutes)); });
+        if (sequentialMode) timers.forEach(function(t, i){ if (i > 0) pauseTimer(t.id); });
+        saveState();
+        renderCards();
+        document.getElementById('sets-panel').classList.remove('visible');
+    }
+    function deleteSet(idx) {
+        if (!confirm('Delete set "' + timerSets[idx].name + '"?')) return;
+        timerSets.splice(idx, 1);
+        saveSets();
+        renderSets();
+    }
+    function saveSets() {
+        try { localStorage.timerSets = JSON.stringify(timerSets); } catch(e) {}
+    }
+    function loadSets() {
+        try { var r = localStorage.timerSets; if (r) timerSets = JSON.parse(r); } catch(e) {}
+    }
+    function renderSets() {
+        var container = document.getElementById('sets-list');
+        container.innerHTML = '';
+        if (timerSets.length === 0) {
+            container.style.cssText = 'font-size:13px;margin-top:4px';
+            container.textContent = 'No saved sets. Add timers then click 💾 Save Current Set.';
+            return;
+        }
+        container.style.cssText = '';
+        timerSets.forEach(function(set, i) {
+            var span = document.createElement('span');
+            var btn  = document.createElement('button');
+            btn.textContent = set.name + ' (' + set.timers.length + ')';
+            btn.style.fontSize = '14px';
+            btn.title = set.timers.map(function(t){ return (t.name || '—') + ' ' + t.minutes + 'm'; }).join(', ');
+            btn.setAttribute('aria-label', 'Load set ' + set.name);
+            btn.onclick = (function(idx){ return function(){ loadSet(idx); }; })(i);
+            var del = document.createElement('button');
+            del.textContent = '✕';
+            del.className = 'set-delete';
+            del.title = 'Delete ' + set.name;
+            del.setAttribute('aria-label', 'Delete set ' + set.name);
+            del.onclick = (function(idx){ return function(){ deleteSet(idx); }; })(i);
+            span.appendChild(btn);
+            span.appendChild(del);
+            container.appendChild(span);
+        });
+    }
+    function toggleSetsPanel() {
+        var panel = document.getElementById('sets-panel');
+        if (panel.classList.toggle('visible')) renderSets();
+    }
+
+    /* ════════════════════════════════════════
+       SESSION HISTORY & FOCUS TIME
+    ════════════════════════════════════════ */
+    function recordHistory(t) {
+        sessionHistory.unshift({
+            name: t.name || '(unnamed)',
+            minutes: +(t.totalMs / 60000).toFixed(1),
+            completedAt: Date.now()
+        });
+        if (sessionHistory.length > 200) sessionHistory.length = 200;
+        try { localStorage.sessionHistory = JSON.stringify(sessionHistory); } catch(e) {}
+    }
+    function loadHistory() {
+        try { var r = localStorage.sessionHistory; if (r) sessionHistory = JSON.parse(r); } catch(e) {}
+    }
+    function todayFocusMin() {
+        var start = new Date();
+        start.setHours(0,0,0,0);
+        return sessionHistory.reduce(function(sum, e){
+            return e.completedAt >= start.getTime() ? sum + e.minutes : sum;
+        }, 0);
+    }
+    function showStats() {
+        var focusMin = todayFocusMin();
+        var h = Math.floor(focusMin / 60), m = Math.round(focusMin % 60);
+        var focusStr = h > 0 ? h + 'h ' + m + 'm' : m + ' min';
+        var html = '<div class="stats-summary">Today\'s focus time: ' + focusStr + '</div>';
+        if (sessionHistory.length === 0) {
+            html += '<p>No history yet — complete a timer to record it.</p>';
+        } else {
+            html += '<div role="list">';
+            sessionHistory.slice(0, 60).forEach(function(e){
+                var d = new Date(e.completedAt);
+                var time = d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+                var date = d.toLocaleDateString([], {month:'short', day:'numeric'});
+                html += '<div class="history-entry" role="listitem">' +
+                    '<strong>' + escHtml(e.name) + '</strong> — ' + e.minutes + ' min' +
+                    '<br><small style="opacity:0.7">' + date + ' at ' + time + '</small>' +
+                    '</div>';
+            });
+            html += '</div>';
+            if (sessionHistory.length > 60) {
+                html += '<p><small>Showing latest 60 of ' + sessionHistory.length + ' entries.</small></p>';
+            }
+            html += '<button onclick="clearHistory()" style="margin-top:8px;color:var(--danger)">🗑 Clear History</button>';
+        }
+        document.getElementById('stats-content').innerHTML = html;
+        document.getElementById('stats-modal').style.display = 'flex';
+    }
+    function clearHistory() {
+        if (!confirm('Clear all session history?')) return;
+        sessionHistory = [];
+        try { localStorage.removeItem('sessionHistory'); } catch(e) {}
+        showStats();
+    }
+
+    /* ════════════════════════════════════════
+       SHARE / EMBED / OBS
+    ════════════════════════════════════════ */
+    function buildShareUrl(extraHash) {
+        var base = location.href.split('#')[0].split('?')[0];
+        var data = timers.map(function(t){
+            return { n: t.name, m: +(t.totalMs / 60000).toFixed(2) };
+        });
+        var hash = 'timers=' + encodeURIComponent(JSON.stringify(data));
+        if (extraHash) hash += '&' + extraHash;
+        return base + '#' + hash;
+    }
+    function showShare() {
+        var shareUrl = buildShareUrl();
+        var obsUrl   = buildShareUrl('obs=1');
+        var embed    = '<iframe src="' + shareUrl + '" width="800" height="600" style="border:none" allowfullscreen></iframe>';
+        document.getElementById('share-url').value  = shareUrl;
+        document.getElementById('embed-code').value = embed;
+        document.getElementById('obs-url').value    = obsUrl;
+        document.getElementById('share-modal').style.display = 'flex';
+    }
+    function copyBox(id) {
+        var el = document.getElementById(id);
+        el.select();
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(el.value);
+            } else {
+                /* document.execCommand('copy') is deprecated but kept as a
+                   last-resort fallback for legacy browsers. */
+                document.execCommand('copy');
+            }
+        } catch(e) {}
+    }
+
+    /* ════════════════════════════════════════
+       CLOCK
+    ════════════════════════════════════════ */
+    function toggleClock() {
+        clockVisible = !clockVisible;
+        document.getElementById('clock').classList.toggle('visible', clockVisible);
+        document.getElementById('btn-clock').classList.toggle('active', clockVisible);
+        try { localStorage.clockVisible = clockVisible ? '1' : ''; } catch(e) {}
+    }
+    function updateClock() {
+        if (!clockVisible) return;
+        var now = new Date();
+        var h = now.getHours().toString().padStart(2,'0');
+        var m = now.getMinutes().toString().padStart(2,'0');
+        var s = now.getSeconds().toString().padStart(2,'0');
+        document.getElementById('clock').textContent = h + ':' + m + ':' + s;
+    }
+
+    /* ════════════════════════════════════════
+       FONT SCALE
+    ════════════════════════════════════════ */
+    function setFontScale(v) {
+        document.documentElement.style.setProperty('--timer-scale', v);
+        try { localStorage.fontScale = v; } catch(e) {}
+    }
+
+    /* ════════════════════════════════════════
+       ADD FORM
+    ════════════════════════════════════════ */
     function addTimerFromForm() {
         var name    = document.getElementById('new-name').value.trim();
         var minutes = parseFloat(document.getElementById('new-minutes').value);
         if (!minutes || minutes <= 0) return;
-        timers.push(makeTimer(name, minutes));
+        var t = makeTimer(name, minutes);
+        if (sequentialMode && timers.length > 0) {
+            t.isPaused = true;
+        }
+        timers.push(t);
         saveState();
         renderCards();
         document.getElementById('add-form').classList.remove('visible');
         document.getElementById('new-name').value = '';
+        maybePromptNotification();
     }
-    function setPreset(m) { document.getElementById('new-minutes').value = m; }
-    function toggleAddForm() { document.getElementById('add-form').classList.toggle('visible'); }
+    function setPreset(m)    { document.getElementById('new-minutes').value = m; }
+    function toggleAddForm() {
+        var f = document.getElementById('add-form');
+        f.classList.toggle('visible');
+        if (f.classList.contains('visible')) document.getElementById('new-minutes').focus();
+    }
 
-    /* ── Rendering ── */
+    /* ════════════════════════════════════════
+       RENDERING
+    ════════════════════════════════════════ */
     function escHtml(s) {
         return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     }
     function renderCards() {
         var container = document.getElementById('timers');
-        // Remove stale cards
         var ids = {};
         timers.forEach(function(t){ ids[t.id] = true; });
         var cards = container.querySelectorAll('.timer-card');
         for (var i = 0; i < cards.length; i++) {
             if (!ids[+cards[i].dataset.id]) cards[i].remove();
         }
-        // Add new cards
         timers.forEach(function(t) {
             if (!container.querySelector('[data-id="'+t.id+'"]')) {
                 container.appendChild(buildCard(t));
             }
         });
-        // Solo mode class
         if (timers.length === 1) container.classList.add('solo');
         else container.classList.remove('solo');
     }
@@ -267,14 +825,19 @@
         var div = document.createElement('div');
         div.className = 'timer-card';
         div.dataset.id = t.id;
+        div.setAttribute('role', 'region');
+        div.setAttribute('aria-label', 'Timer: ' + (t.name || 'Unnamed'));
         div.innerHTML =
-            '<div class="timer-label">' + escHtml(t.name) + '</div>' +
-            '<div class="timer-display">--:--</div>' +
-            '<div class="progress-track"><div class="progress-fill" style="width:100%"></div></div>' +
+            '<div class="timer-label" aria-label="Timer name">' + escHtml(t.name) + '</div>' +
+            '<div class="timer-display" aria-live="polite" aria-label="Time remaining">--:--</div>' +
+            '<div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100">' +
+                '<div class="progress-fill" style="width:100%"></div>' +
+            '</div>' +
+            '<div class="pomo-badge" aria-live="polite"></div>' +
             '<div class="timer-btns">' +
-                '<button class="btn-pr" onclick="togglePause('+t.id+')">⏸ PAUSE</button>' +
-                '<button onclick="resetTimer('+t.id+')">↺ RESET</button>' +
-                '<button onclick="removeTimer('+t.id+')">✕</button>' +
+                '<button class="btn-pr" onclick="togglePause('+t.id+')" aria-label="Pause timer">⏸ PAUSE</button>' +
+                '<button onclick="resetTimer('+t.id+')" aria-label="Reset timer">↺ RESET</button>' +
+                '<button onclick="removeTimer('+t.id+')" aria-label="Remove timer">✕</button>' +
             '</div>';
         return div;
     }
@@ -287,48 +850,83 @@
 
             if (finished && !t.hasFinished) {
                 t.hasFinished = true;
-                if (!t.hasPlayedSound) { t.hasPlayedSound = true; playBeep(); }
+                if (!t.hasPlayedSound) {
+                    t.hasPlayedSound = true;
+                    playSound();
+                    var label = t.name || 'Timer';
+                    showNotification('⏰ ' + label + ' finished!', 'Your countdown has ended.');
+                    recordHistory(t);
+                    if (pomodoroState && pomodoroState.timerId === t.id) {
+                        /* Small delay so the finish sound completes before
+                           advancing to the next Pomodoro phase. */
+                        setTimeout(advancePomodoro, 900);
+                    } else {
+                        advanceSequential(t.id);
+                    }
+                }
             }
 
             var displayEl = card.querySelector('.timer-display');
             var fillEl    = card.querySelector('.progress-fill');
+            var trackEl   = card.querySelector('.progress-track');
             var pauseBtn  = card.querySelector('.btn-pr');
+            var pomoBadge = card.querySelector('.pomo-badge');
+
+            // Pomodoro badge
+            if (pomodoroState && pomodoroState.timerId === t.id) {
+                pomoBadge.textContent = 'Round ' + pomodoroState.round + ' · ' + pomodoroState.phase;
+            } else {
+                pomoBadge.textContent = '';
+            }
 
             if (finished) {
                 displayEl.textContent = '00:00';
-                displayEl.className = 'timer-display finished';
-                fillEl.style.width = '0%';
-                fillEl.className = 'progress-fill';
+                displayEl.className   = 'timer-display finished';
+                displayEl.setAttribute('aria-label', 'Timer finished');
+                fillEl.style.width    = '0%';
+                fillEl.className      = 'progress-fill';
+                if (trackEl) trackEl.setAttribute('aria-valuenow', '0');
             } else {
                 var urgent  = remaining < 60000;
                 var minutes = Math.floor(remaining / 60000);
                 var seconds = Math.floor(remaining / 1000) % 60;
+                var dispText;
                 if (urgent) {
-                    displayEl.textContent = seconds.toString().padStart(2, '0');
+                    dispText = seconds.toString().padStart(2, '0');
                     displayEl.className = 'timer-display urgent';
+                    displayEl.setAttribute('aria-label', dispText + ' seconds remaining');
                 } else {
-                    displayEl.textContent = minutes + ':' + seconds.toString().padStart(2, '0');
+                    dispText = minutes + ':' + seconds.toString().padStart(2, '0');
                     displayEl.className = 'timer-display';
+                    displayEl.setAttribute('aria-label', minutes + ' minutes ' + seconds + ' seconds remaining');
                 }
+                displayEl.textContent = dispText;
                 var pct = Math.max(0, Math.min(100, (remaining / t.totalMs) * 100));
                 fillEl.style.width = pct + '%';
-                fillEl.className = urgent ? 'progress-fill urgent' : 'progress-fill';
+                fillEl.className   = urgent ? 'progress-fill urgent' : 'progress-fill';
+                if (trackEl) trackEl.setAttribute('aria-valuenow', Math.round(pct));
             }
 
             if (finished) {
                 pauseBtn.textContent = '⏸ PAUSE';
-                pauseBtn.disabled = true;
+                pauseBtn.disabled    = true;
+                pauseBtn.setAttribute('aria-label', 'Timer finished');
             } else if (t.isPaused) {
                 pauseBtn.textContent = '▶ RESUME';
-                pauseBtn.disabled = false;
+                pauseBtn.disabled    = false;
+                pauseBtn.setAttribute('aria-label', 'Resume timer');
             } else {
                 pauseBtn.textContent = '⏸ PAUSE';
-                pauseBtn.disabled = false;
+                pauseBtn.disabled    = false;
+                pauseBtn.setAttribute('aria-label', 'Pause timer');
             }
         });
+        updateClock();
     }
 
-    /* ── Controls ── */
+    /* ════════════════════════════════════════
+       CONTROLS
+    ════════════════════════════════════════ */
     function toggleControls() {
         document.body.classList.toggle('controls-hidden');
     }
@@ -350,16 +948,67 @@
         }
     }
     document.addEventListener('fullscreenchange', function() {
-        document.getElementById('btn-fs').textContent = document.fullscreenElement ? '⛶ EXIT FS' : '⛶ FS';
+        document.getElementById('btn-fs').textContent =
+            document.fullscreenElement ? '⛶ EXIT FS' : '⛶ FS';
     });
 
-    /* ── Theme ── */
+    /* ════════════════════════════════════════
+       KEYBOARD SHORTCUTS
+    ════════════════════════════════════════ */
+    document.addEventListener('keydown', function(e) {
+        var tag = e.target.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+        if (e.ctrlKey || e.metaKey || e.altKey) return;
+        switch (e.key) {
+            case ' ':
+                e.preventDefault();
+                var active = timers.find(function(t){ return !t.isPaused && !t.hasFinished; });
+                if (active)  { pauseTimer(active.id); }
+                else {
+                    var paused = timers.find(function(t){ return t.isPaused && !t.hasFinished; });
+                    if (paused) resumeTimer(paused.id);
+                }
+                break;
+            case 'n': case 'N':
+                e.preventDefault();
+                toggleAddForm();
+                break;
+            case 'r': case 'R':
+                e.preventDefault();
+                if (timers.length > 0) resetTimer(timers[0].id);
+                break;
+            case 'f': case 'F':
+                e.preventDefault();
+                toggleFullscreen();
+                break;
+            case 'Escape':
+                var openModal = document.querySelector('.modal-overlay[style*="flex"]');
+                if (openModal) { openModal.style.display = 'none'; return; }
+                toggleControls();
+                break;
+        }
+    });
+
+    /* ════════════════════════════════════════
+       THEME
+    ════════════════════════════════════════ */
     function setTheme(theme) {
         document.documentElement.dataset.theme = theme;
         try { localStorage.theme = theme; } catch(e) {}
     }
 
-    /* ── Persistence ── */
+    /* ════════════════════════════════════════
+       MODALS
+    ════════════════════════════════════════ */
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    var overlays = document.querySelectorAll('.modal-overlay');
+    Array.prototype.forEach.call(overlays, function(el) {
+        el.addEventListener('click', function(e){ if (e.target === el) el.style.display = 'none'; });
+    });
+
+    /* ════════════════════════════════════════
+       PERSISTENCE
+    ════════════════════════════════════════ */
     function saveState() {
         try {
             localStorage.timersState = JSON.stringify(timers.map(function(t) {
@@ -370,6 +1019,8 @@
                 };
             }));
             localStorage.nextId = nextId;
+            if (pomodoroState) localStorage.pomodoroState = JSON.stringify(pomodoroState);
+            else { try { localStorage.removeItem('pomodoroState'); } catch(e2) {} }
         } catch(e) {}
     }
     function loadState() {
@@ -386,20 +1037,49 @@
                     };
                 });
                 nextId = +localStorage.nextId || (maxTimerId() + 1);
+                try { var ps = localStorage.pomodoroState; if (ps) pomodoroState = JSON.parse(ps); } catch(e) {}
                 return true;
             }
         } catch(e) {}
         return false;
     }
 
-    /* ── URL params ── */
+    /* ════════════════════════════════════════
+       URL PARAMS & HASH ROUTING
+    ════════════════════════════════════════ */
+    function parseHash() {
+        var hash = location.hash.replace(/^#/, '');
+        var out  = {};
+        if (!hash) return out;
+        hash.split('&').forEach(function(part) {
+            var eq = part.indexOf('=');
+            if (eq > -1) out[part.slice(0, eq)] = decodeURIComponent(part.slice(eq + 1));
+        });
+        return out;
+    }
     function handleUrlParams() {
-        var params = new URLSearchParams(location.search);
+        // Legacy query-string format
+        var params  = new URLSearchParams(location.search);
         var minutes = parseFloat(params.get('minutes'));
         var name    = params.get('name') || '';
-        if (minutes > 0) {
-            timers.push(makeTimer(name, minutes));
-            saveState();
+        if (minutes > 0) { timers.push(makeTimer(name, minutes)); saveState(); return; }
+
+        // Hash-based routing
+        var hash = parseHash();
+        if (hash.obs === '1') document.body.classList.add('obs-mode');
+        if (hash.timers) {
+            try {
+                JSON.parse(hash.timers).forEach(function(d){ timers.push(makeTimer(d.n, d.m)); });
+                saveState();
+            } catch(e) {
+                // Malformed hash — show a brief notice and continue without restoring timers
+                setTimeout(function() {
+                    document.getElementById('notif-text').textContent = 'Could not restore shared timers — the URL may be malformed.';
+                    document.getElementById('notif-allow-btn').style.display = 'none';
+                    document.getElementById('notif-banner').classList.add('visible');
+                    setTimeout(dismissNotifBanner, 4000);
+                }, 300);
+            }
         }
     }
 
@@ -419,7 +1099,9 @@
         return false;
     }
 
-    /* ── Init ── */
+    /* ════════════════════════════════════════
+       INIT
+    ════════════════════════════════════════ */
     // Theme
     try {
         if (localStorage.theme) {
@@ -428,18 +1110,59 @@
         }
     } catch(e) {}
 
+    // Sound & Volume
+    try {
+        if (localStorage.soundType) { soundType = localStorage.soundType; document.getElementById('sound-select').value = soundType; }
+        if (localStorage.volume)    { volume = parseFloat(localStorage.volume); document.getElementById('vol-slider').value = volume; }
+    } catch(e) {}
+
+    // Font scale
+    try {
+        if (localStorage.fontScale) {
+            setFontScale(localStorage.fontScale);
+            document.getElementById('font-size-slider').value = localStorage.fontScale;
+        }
+    } catch(e) {}
+
+    // Clock
+    try {
+        if (localStorage.clockVisible) {
+            clockVisible = true;
+            document.getElementById('clock').classList.add('visible');
+            document.getElementById('btn-clock').classList.add('active');
+        }
+    } catch(e) {}
+
+    // Sequential mode
+    try {
+        if (localStorage.sequentialMode) {
+            sequentialMode = true;
+            document.getElementById('btn-seq').classList.add('active');
+        }
+    } catch(e) {}
+
+    // Presets, Sets, History
+    loadPresets();
+    loadSets();
+    loadHistory();
+
     // State
     if (!loadState()) loadLegacy();
     handleUrlParams();
 
     // Show add form if no timers
-    if (timers.length === 0) {
-        document.getElementById('add-form').classList.add('visible');
-    }
+    if (timers.length === 0) document.getElementById('add-form').classList.add('visible');
 
     renderCards();
+    renderPresets();
     setInterval(function() { updateCards(); }, 200);
+
+    // PWA Service Worker
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js').catch(function(){});
+    }
     </script>
 
     <script src="smart-tv.js"></script>
 </body>
+</html>
