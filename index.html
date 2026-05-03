@@ -391,7 +391,17 @@
     ════════════════════════════════════════ */
     function requestNotificationPermission() {
         if (!('Notification' in window)) return;
-        Notification.requestPermission(function() { dismissNotifBanner(); });
+        Notification.requestPermission(function(result) {
+            dismissNotifBanner();
+            if (result === 'denied') {
+                // Show a brief hint that notifications were blocked
+                var banner = document.getElementById('notif-banner');
+                document.getElementById('notif-text').textContent = 'Notifications blocked — you can change this in browser settings.';
+                document.getElementById('notif-allow-btn').style.display = 'none';
+                banner.classList.add('visible');
+                setTimeout(dismissNotifBanner, 4000);
+            }
+        });
         try { localStorage.notifAsked = '1'; } catch(e) {}
     }
     function showNotification(title, body) {
@@ -718,7 +728,7 @@
     function showShare() {
         var shareUrl = buildShareUrl();
         var obsUrl   = buildShareUrl('obs=1');
-        var embed    = '<iframe src="' + shareUrl + '" width="800" height="600" frameborder="0" allowfullscreen></iframe>';
+        var embed    = '<iframe src="' + shareUrl + '" width="800" height="600" style="border:none" allowfullscreen></iframe>';
         document.getElementById('share-url').value  = shareUrl;
         document.getElementById('embed-code').value = embed;
         document.getElementById('obs-url').value    = obsUrl;
@@ -731,6 +741,8 @@
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(el.value);
             } else {
+                /* document.execCommand('copy') is deprecated but kept as a
+                   last-resort fallback for legacy browsers. */
                 document.execCommand('copy');
             }
         } catch(e) {}
@@ -845,6 +857,8 @@
                     showNotification('⏰ ' + label + ' finished!', 'Your countdown has ended.');
                     recordHistory(t);
                     if (pomodoroState && pomodoroState.timerId === t.id) {
+                        /* Small delay so the finish sound completes before
+                           advancing to the next Pomodoro phase. */
                         setTimeout(advancePomodoro, 900);
                     } else {
                         advanceSequential(t.id);
@@ -1057,7 +1071,15 @@
             try {
                 JSON.parse(hash.timers).forEach(function(d){ timers.push(makeTimer(d.n, d.m)); });
                 saveState();
-            } catch(e) {}
+            } catch(e) {
+                // Malformed hash — show a brief notice and continue without restoring timers
+                setTimeout(function() {
+                    document.getElementById('notif-text').textContent = 'Could not restore shared timers — the URL may be malformed.';
+                    document.getElementById('notif-allow-btn').style.display = 'none';
+                    document.getElementById('notif-banner').classList.add('visible');
+                    setTimeout(dismissNotifBanner, 4000);
+                }, 300);
+            }
         }
     }
 
