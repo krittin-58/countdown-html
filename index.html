@@ -1,82 +1,444 @@
 <!doctype html>
 <title>Countdown</title>
 <style>
-    html, body {
-        height: 100%;
-        margin: 0;
-        padding: 0;
+    :root {
+        --bg-start: #123;
+        --bg-end: #234;
+        --fg: #fff;
+        --accent: #4f4;
+        --danger: #f55;
+        --warn: #ff5;
+        --panel-bg: #353433;
+        --panel-border: #656463;
+        --btn-bg: #000;
+        --btn-border: #555453;
+        --bar-bg: rgba(255,255,255,0.15);
+        --bar-fill: #4f4;
     }
+    [data-theme="ocean"]  { --bg-start:#011a2e; --bg-end:#023858; --accent:#0bf; --bar-fill:#0bf; }
+    [data-theme="sunset"] { --bg-start:#3a0a0a; --bg-end:#8b3a00; --accent:#ffb; --bar-fill:#ffb; }
+    [data-theme="forest"] { --bg-start:#0a1a0a; --bg-end:#0d3b1a; --accent:#8f8; --bar-fill:#8f8; }
+    [data-theme="purple"] { --bg-start:#1a0a2e; --bg-end:#2d0a58; --accent:#c8f; --bar-fill:#c8f; }
+
+    html, body { height:100%; margin:0; padding:0; overflow:hidden; }
     body {
-        background: linear-gradient(to bottom, #123, #234);
-        color: #fff;
+        background: linear-gradient(to bottom, var(--bg-start), var(--bg-end));
+        color: var(--fg);
         font: 18px Cousine, Menlo, Monaco, monospace;
+        transition: background 0.5s;
     }
-    #timer {
-        position: fixed;
-        top: 0; right: 0; bottom: 0; left: 0;
-        text-align: center;
-        line-height: 90vh;
-        font-size: 240px;
+
+    /* ── Timers grid ── */
+    #timers {
+        position: fixed; inset: 0;
+        display: flex; flex-wrap: wrap;
+        align-items: center; justify-content: center;
+        gap: 20px; padding: 20px;
+        box-sizing: border-box;
     }
+    .timer-card {
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        flex: 1 1 280px; min-width: 280px; max-width: 560px;
+        padding: 16px; box-sizing: border-box;
+    }
+    /* Solo timer fills the screen */
+    #timers.solo .timer-card { min-width:100%; min-height:80vh; }
+
+    .timer-label {
+        font-size: 22px; margin-bottom: 8px;
+        color: var(--accent); min-height: 28px;
+    }
+    .timer-display {
+        font-size: clamp(60px, 14vw, 200px);
+        line-height: 1.1;
+        transition: color 0.3s;
+    }
+    .timer-display.urgent   { color: var(--danger); font-size: clamp(80px, 20vw, 240px); }
+    .timer-display.finished { color: var(--warn); }
+
+    /* Progress bar */
+    .progress-track {
+        width: 100%; max-width: 480px; height: 8px;
+        background: var(--bar-bg); border-radius: 4px;
+        margin: 12px 0; overflow: hidden;
+    }
+    .progress-fill {
+        height: 100%; background: var(--bar-fill);
+        border-radius: 4px; transition: width 0.2s linear, background 0.3s;
+    }
+    .progress-fill.urgent { background: var(--danger); }
+
+    /* Timer card buttons */
+    .timer-btns { display:flex; gap:6px; margin-top:8px; }
+
+    /* Buttons */
+    button, select {
+        background: var(--btn-bg);
+        border: 1px solid var(--btn-border);
+        padding: 4px 8px; margin: 2px;
+        color: var(--accent);
+        font-family: inherit; font-size: 16px;
+        cursor: pointer;
+    }
+    button:hover, select:hover { border-color: var(--accent); }
+    button:disabled { opacity: 0.35; cursor: default; }
+
+    /* Control panel */
     #control {
-        position: fixed;
-        top: 30px; left: 30px;
-        background: #353433;
-        border: 2px solid #656463;
-        opacity: 1;
-        transition: 0.1s opacity;
+        position: fixed; top: 20px; left: 20px;
+        background: var(--panel-bg);
+        border: 2px solid var(--panel-border);
+        padding: 8px; z-index: 100;
+        transition: opacity 0.15s;
     }
-    #control button {
-        background: #000;
-        border: 1px solid #555453;
-        padding: 4px;
-        margin: 2px;
-        color: #4f4;
-        font-family: inherit;
-        font-size: 20px;
+    #ctrl-row { display:flex; flex-wrap:wrap; gap:4px; align-items:center; }
+
+    #add-form { margin-top:8px; display:none; }
+    #add-form.visible { display:block; }
+    #add-form input[type=text],
+    #add-form input[type=number] {
+        background:#111; border:1px solid #555; color:#fff;
+        font-family:inherit; font-size:16px;
+        padding:3px 6px; width:140px;
     }
-    .controls-hidden #timer {
-        cursor: none;
-    }
-    .controls-hidden #control {
-        opacity: 0;
-        pointer-events: none;
-    }
+    .preset-btns { display:flex; gap:4px; flex-wrap:wrap; margin-top:4px; }
+    .preset-btns button { font-size:14px; padding:2px 6px; margin:0; }
+
+    /* Hidden-controls mode */
+    .controls-hidden #control      { opacity:0; pointer-events:none; }
+    .controls-hidden .timer-btns   { display:none; }
+    .controls-hidden .timer-label  { display:none; }
+    .controls-hidden .progress-track { display:none; }
+    .controls-hidden *             { cursor:none !important; }
 </style>
 <body>
-    <div id="timer" onclick="toggleControls()"></div>
+    <div id="timers" onclick="onTimersClick(event)"></div>
+
     <div id="control">
-        <button onclick="setTimer()">SET TIMER</button>
-        <button onclick="resetTimer()">RESET</button>
-        <button onclick="toggleControls()">HIDE</button>
+        <div id="ctrl-row">
+            <button onclick="toggleAddForm()">＋ ADD</button>
+            <button onclick="toggleControls()">HIDE</button>
+            <button id="btn-fs" onclick="toggleFullscreen()">⛶ FS</button>
+            <select id="theme-select" onchange="setTheme(this.value)">
+                <option value="">Dark</option>
+                <option value="ocean">Ocean</option>
+                <option value="sunset">Sunset</option>
+                <option value="forest">Forest</option>
+                <option value="purple">Purple</option>
+            </select>
+        </div>
+        <div id="add-form">
+            <input type="text"   id="new-name"    placeholder="Timer name (optional)"><br>
+            <input type="number" id="new-minutes" placeholder="Minutes" min="0.1" step="0.5" value="25">
+            <button onclick="addTimerFromForm()">▶ START</button>
+            <div class="preset-btns">
+                <button onclick="setPreset(5)">5m</button>
+                <button onclick="setPreset(10)">10m</button>
+                <button onclick="setPreset(15)">15m</button>
+                <button onclick="setPreset(25)">25m 🍅</button>
+                <button onclick="setPreset(45)">45m</button>
+            </div>
+        </div>
     </div>
+
     <script>
-    var endTime = (+localStorage.endTime || 0)
-    function setTimer() {
-        var duration = +prompt('How long to set the timer (minutes)', '15')
-        endTime = localStorage.endTime = duration * 60e3 + Date.now()
-        update()
+    /* ── State ── */
+    var timers = [];
+    var nextId = 1;
+    var audioCtx = null;
+
+    /* ── Audio ── */
+    function getAudioCtx() {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        return audioCtx;
     }
-    function resetTimer() {
-        endTime = 0
+    function playBeep() {
+        try {
+            var ctx = getAudioCtx();
+            [0, 0.35, 0.7].forEach(function(offset) {
+                var osc  = ctx.createOscillator();
+                var gain = ctx.createGain();
+                osc.connect(gain); gain.connect(ctx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(880, ctx.currentTime + offset);
+                gain.gain.setValueAtTime(0.5, ctx.currentTime + offset);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + offset + 0.3);
+                osc.start(ctx.currentTime + offset);
+                osc.stop(ctx.currentTime + offset + 0.3);
+            });
+        } catch(e) {}
     }
+
+    /* ── Timer model ── */
+    function makeTimer(name, minutes) {
+        var ms = minutes * 60000;
+        return {
+            id: nextId++, name: name || '',
+            totalMs: ms, remainingMs: ms,
+            endTime: Date.now() + ms,
+            isPaused: false, hasFinished: false, hasPlayedSound: false
+        };
+    }
+    function getRemaining(t) {
+        return t.isPaused ? t.remainingMs : t.endTime - Date.now();
+    }
+    function findTimer(id) {
+        return timers.find(function(x){ return x.id===id; });
+    }
+    function maxTimerId() {
+        var max = 0;
+        timers.forEach(function(t){ if (t.id > max) max = t.id; });
+        return max;
+    }
+    function pauseTimer(id) {
+        var t = findTimer(id);
+        if (!t || t.isPaused || t.hasFinished) return;
+        t.remainingMs = Math.max(0, t.endTime - Date.now());
+        t.isPaused = true;
+        saveState();
+    }
+    function resumeTimer(id) {
+        var t = findTimer(id);
+        if (!t || !t.isPaused) return;
+        t.endTime = Date.now() + t.remainingMs;
+        t.isPaused = false;
+        saveState();
+    }
+    function resetTimer(id) {
+        var t = findTimer(id);
+        if (!t) return;
+        t.remainingMs = t.totalMs;
+        t.endTime = Date.now() + t.totalMs;
+        t.isPaused = false;
+        t.hasFinished = false;
+        t.hasPlayedSound = false;
+        saveState();
+    }
+    function removeTimer(id) {
+        timers = timers.filter(function(x){ return x.id!==id; });
+        saveState();
+        renderCards();
+    }
+    function togglePause(id) {
+        var t = findTimer(id);
+        if (!t) return;
+        if (t.isPaused) resumeTimer(id); else pauseTimer(id);
+    }
+
+    /* ── Add form ── */
+    function addTimerFromForm() {
+        var name    = document.getElementById('new-name').value.trim();
+        var minutes = parseFloat(document.getElementById('new-minutes').value);
+        if (!minutes || minutes <= 0) return;
+        timers.push(makeTimer(name, minutes));
+        saveState();
+        renderCards();
+        document.getElementById('add-form').classList.remove('visible');
+        document.getElementById('new-name').value = '';
+    }
+    function setPreset(m) { document.getElementById('new-minutes').value = m; }
+    function toggleAddForm() { document.getElementById('add-form').classList.toggle('visible'); }
+
+    /* ── Rendering ── */
+    function escHtml(s) {
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+    function renderCards() {
+        var container = document.getElementById('timers');
+        // Remove stale cards
+        var ids = {};
+        timers.forEach(function(t){ ids[t.id] = true; });
+        var cards = container.querySelectorAll('.timer-card');
+        for (var i = 0; i < cards.length; i++) {
+            if (!ids[+cards[i].dataset.id]) cards[i].remove();
+        }
+        // Add new cards
+        timers.forEach(function(t) {
+            if (!container.querySelector('[data-id="'+t.id+'"]')) {
+                container.appendChild(buildCard(t));
+            }
+        });
+        // Solo mode class
+        if (timers.length === 1) container.classList.add('solo');
+        else container.classList.remove('solo');
+    }
+    function buildCard(t) {
+        var div = document.createElement('div');
+        div.className = 'timer-card';
+        div.dataset.id = t.id;
+        div.innerHTML =
+            '<div class="timer-label">' + escHtml(t.name) + '</div>' +
+            '<div class="timer-display">--:--</div>' +
+            '<div class="progress-track"><div class="progress-fill" style="width:100%"></div></div>' +
+            '<div class="timer-btns">' +
+                '<button class="btn-pr" onclick="togglePause('+t.id+')">⏸ PAUSE</button>' +
+                '<button onclick="resetTimer('+t.id+')">↺ RESET</button>' +
+                '<button onclick="removeTimer('+t.id+')">✕</button>' +
+            '</div>';
+        return div;
+    }
+    function updateCards() {
+        timers.forEach(function(t) {
+            var card = document.querySelector('[data-id="'+t.id+'"]');
+            if (!card) return;
+            var remaining = getRemaining(t);
+            var finished  = remaining <= 0;
+
+            if (finished && !t.hasFinished) {
+                t.hasFinished = true;
+                if (!t.hasPlayedSound) { t.hasPlayedSound = true; playBeep(); }
+            }
+
+            var displayEl = card.querySelector('.timer-display');
+            var fillEl    = card.querySelector('.progress-fill');
+            var pauseBtn  = card.querySelector('.btn-pr');
+
+            if (finished) {
+                displayEl.textContent = '00:00';
+                displayEl.className = 'timer-display finished';
+                fillEl.style.width = '0%';
+                fillEl.className = 'progress-fill';
+            } else {
+                var urgent  = remaining < 60000;
+                var minutes = Math.floor(remaining / 60000);
+                var seconds = Math.floor(remaining / 1000) % 60;
+                if (urgent) {
+                    displayEl.textContent = seconds.toString().padStart(2, '0');
+                    displayEl.className = 'timer-display urgent';
+                } else {
+                    displayEl.textContent = minutes + ':' + seconds.toString().padStart(2, '0');
+                    displayEl.className = 'timer-display';
+                }
+                var pct = Math.max(0, Math.min(100, (remaining / t.totalMs) * 100));
+                fillEl.style.width = pct + '%';
+                fillEl.className = urgent ? 'progress-fill urgent' : 'progress-fill';
+            }
+
+            if (finished) {
+                pauseBtn.textContent = '⏸ PAUSE';
+                pauseBtn.disabled = true;
+            } else if (t.isPaused) {
+                pauseBtn.textContent = '▶ RESUME';
+                pauseBtn.disabled = false;
+            } else {
+                pauseBtn.textContent = '⏸ PAUSE';
+                pauseBtn.disabled = false;
+            }
+        });
+    }
+
+    /* ── Controls ── */
     function toggleControls() {
-        document.body.classList.toggle('controls-hidden')
+        document.body.classList.toggle('controls-hidden');
     }
-    function update() {
-        var timeLeft = endTime - Date.now()
-        if (timeLeft < 0) {
-            setText('--:--')
-        } else {
-            var minutes = Math.floor(timeLeft / 60e3)
-            var seconds = Math.floor(timeLeft / 1e3) % 60
-            setText(`${minutes}:${seconds.toString(10).padStart(2, '0')}`)
+    function onTimersClick(e) {
+        var isBtn = e.target.closest && e.target.closest('button');
+        if (isBtn) return;
+        var hidden = document.body.classList.contains('controls-hidden');
+        if (hidden) {
+            document.body.classList.remove('controls-hidden');
+        } else if (e.target.classList && e.target.classList.contains('timer-display')) {
+            document.body.classList.add('controls-hidden');
         }
     }
-    function setText(text) {
-        document.getElementById('timer').textContent = text
+    function toggleFullscreen() {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen && document.documentElement.requestFullscreen();
+        } else {
+            document.exitFullscreen && document.exitFullscreen();
+        }
     }
-    setInterval(update, 200)
+    document.addEventListener('fullscreenchange', function() {
+        document.getElementById('btn-fs').textContent = document.fullscreenElement ? '⛶ EXIT FS' : '⛶ FS';
+    });
+
+    /* ── Theme ── */
+    function setTheme(theme) {
+        document.documentElement.dataset.theme = theme;
+        try { localStorage.theme = theme; } catch(e) {}
+    }
+
+    /* ── Persistence ── */
+    function saveState() {
+        try {
+            localStorage.timersState = JSON.stringify(timers.map(function(t) {
+                return {
+                    id: t.id, name: t.name, totalMs: t.totalMs,
+                    remainingMs: t.isPaused ? t.remainingMs : Math.max(0, t.endTime - Date.now()),
+                    isPaused: t.isPaused, hasFinished: t.hasFinished, hasPlayedSound: t.hasPlayedSound
+                };
+            }));
+            localStorage.nextId = nextId;
+        } catch(e) {}
+    }
+    function loadState() {
+        try {
+            var raw = localStorage.timersState;
+            if (raw) {
+                var parsed = JSON.parse(raw);
+                timers = parsed.map(function(s) {
+                    return {
+                        id: s.id, name: s.name || '', totalMs: s.totalMs,
+                        remainingMs: s.remainingMs,
+                        endTime: s.isPaused ? Date.now() : Date.now() + s.remainingMs,
+                        isPaused: s.isPaused, hasFinished: s.hasFinished, hasPlayedSound: s.hasPlayedSound
+                    };
+                });
+                nextId = +localStorage.nextId || (maxTimerId() + 1);
+                return true;
+            }
+        } catch(e) {}
+        return false;
+    }
+
+    /* ── URL params ── */
+    function handleUrlParams() {
+        var params = new URLSearchParams(location.search);
+        var minutes = parseFloat(params.get('minutes'));
+        var name    = params.get('name') || '';
+        if (minutes > 0) {
+            timers.push(makeTimer(name, minutes));
+            saveState();
+        }
+    }
+
+    /* ── Backwards compat: old single-endTime format ── */
+    function loadLegacy() {
+        var endTime = +localStorage.endTime;
+        if (!endTime) return false;
+        var remaining = endTime - Date.now();
+        if (remaining > 0) {
+            timers.push({
+                id: nextId++, name: '', totalMs: remaining,
+                remainingMs: remaining, endTime: endTime,
+                isPaused: false, hasFinished: false, hasPlayedSound: false
+            });
+            return true;
+        }
+        return false;
+    }
+
+    /* ── Init ── */
+    // Theme
+    try {
+        if (localStorage.theme) {
+            document.documentElement.dataset.theme = localStorage.theme;
+            document.getElementById('theme-select').value = localStorage.theme;
+        }
+    } catch(e) {}
+
+    // State
+    if (!loadState()) loadLegacy();
+    handleUrlParams();
+
+    // Show add form if no timers
+    if (timers.length === 0) {
+        document.getElementById('add-form').classList.add('visible');
+    }
+
+    renderCards();
+    setInterval(function() { updateCards(); }, 200);
     </script>
 
     <script src="smart-tv.js"></script>
