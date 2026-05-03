@@ -1,11 +1,10 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Countdown</title>
 <link rel="manifest" href="manifest.json">
-</head>
 <style>
     :root {
         --bg-start: #123;
@@ -185,6 +184,8 @@
     }
     [data-theme="light"] #io-textarea { background:#fff; color:#111; border-color:#aaa; }
 
+    .form-error { color:var(--danger); font-size:13px; min-height:16px; }
+
     /* Hidden-controls mode */
     .controls-hidden #control        { opacity:0; pointer-events:none; }
     .controls-hidden .timer-btns     { display:none; }
@@ -265,6 +266,7 @@
             <div class="add-row">
                 <label><input type="checkbox" id="new-repeat"> Auto-repeat 🔁</label>
             </div>
+            <div id="add-error" class="form-error"></div>
         </div>
 
         <!-- Export / Import -->
@@ -275,6 +277,7 @@
                 <button onclick="importJSON()">📥 Import</button>
                 <button onclick="toggleIO()">✕</button>
             </div>
+            <div id="io-error" class="form-error"></div>
         </div>
     </div>
 
@@ -423,10 +426,9 @@
         document.getElementById('tab-until').classList.toggle('tab-active', mode === 'until');
         if (mode === 'until') {
             var d = new Date(Date.now() + 25 * 60000);
-            var pad = function(n){ return n < 10 ? '0' + n : '' + n; };
-            document.getElementById('new-datetime').value =
-                d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) +
-                'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+            // datetime-local needs local time; adjust for timezone offset
+            var local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+            document.getElementById('new-datetime').value = local.toISOString().slice(0, 16);
         }
     }
 
@@ -435,12 +437,17 @@
         var name   = document.getElementById('new-name').value.trim();
         var repeat = document.getElementById('new-repeat').checked;
         var nextSel = +document.getElementById('new-next').value || null;
+        var errEl  = document.getElementById('add-error');
+        if (errEl) errEl.textContent = '';
         var ms;
         if (addMode === 'until') {
             var dtVal = document.getElementById('new-datetime').value;
             if (!dtVal) return;
             ms = new Date(dtVal).getTime() - Date.now();
-            if (ms <= 0) return;
+            if (ms <= 0) {
+                if (errEl) errEl.textContent = 'Target time must be in the future.';
+                return;
+            }
         } else {
             var minutes = parseFloat(document.getElementById('new-minutes').value);
             if (!minutes || minutes <= 0) return;
@@ -534,7 +541,13 @@
 
     /* ── Rendering helpers ── */
     function escHtml(s) {
-        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        return String(s)
+            .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+            .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+    /* Only accept CSS hex colors (#rgb / #rrggbb / #rrggbbaa) to prevent injection */
+    function sanitizeColor(c) {
+        return typeof c === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(c) ? c : '';
     }
     function fmtMs(ms) {
         var m = Math.floor(ms / 60000);
@@ -575,7 +588,8 @@
             if (!e.target.closest('button,input,select')) setActiveTimer(t.id);
         });
 
-        var labelColor = t.color ? ' style="color:' + t.color + '"' : '';
+        var safeColor  = sanitizeColor(t.color);
+        var labelColor = safeColor ? ' style="color:' + safeColor + '"' : '';
         div.innerHTML =
             '<div class="timer-label"' + labelColor + '>' + escHtml(t.name) + '</div>' +
             '<div class="timer-completions"></div>' +
@@ -589,7 +603,7 @@
             '</div>' +
             '<div class="timer-extras">' +
                 '<label title="Accent colour">🎨 <input type="color" value="' +
-                    escHtml(t.color || '#44ff44') + '" onchange="setTimerColor('+t.id+',this.value)"></label>' +
+                    escHtml(safeColor || '#44ff44') + '" onchange="setTimerColor('+t.id+',this.value)"></label>' +
                 '<label><input type="checkbox" class="card-repeat-chk"' +
                     (t.repeat ? ' checked' : '') + ' onchange="setTimerRepeat('+t.id+',this.checked)"> Auto-repeat 🔁</label>' +
                 '<label>Then start: <select class="card-next-sel" onchange="setTimerNextId('+t.id+',this.value)"></select></label>' +
@@ -608,9 +622,12 @@
     function setTimerColor(id, color) {
         var t = findTimer(id);
         if (!t) return;
-        t.color = color;
+        t.color = sanitizeColor(color);
         var card = document.querySelector('[data-id="'+id+'"]');
-        if (card) card.querySelector('.timer-label').style.color = color;
+        if (card) {
+            var label = card.querySelector('.timer-label');
+            label.style.color = t.color || '';
+        }
         saveState();
     }
     function setTimerRepeat(id, val) {
@@ -763,7 +780,7 @@
             endTime: endTime,
             isPaused: !!s.isPaused, hasFinished: !!s.hasFinished, hasPlayedSound: !!s.hasPlayedSound,
             finishedAt: s.hasFinished ? (s.finishedAt || Date.now()) : null,
-            color: s.color || '', repeat: !!s.repeat,
+            color: sanitizeColor(s.color || ''), repeat: !!s.repeat,
             completions: s.completions || 0, nextTimerId: s.nextTimerId || null
         };
     }
@@ -878,8 +895,18 @@
         });
         var url = location.origin + location.pathname +
                   '#share=' + encodeURIComponent(JSON.stringify(data));
+        var btn = document.querySelector('[onclick="shareTimers()"]');
+        function showCopied() {
+            if (btn) {
+                var orig = btn.textContent;
+                btn.textContent = '✓ Copied';
+                setTimeout(function(){ btn.textContent = orig; }, 2000);
+            }
+        }
         if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(url).then(function() { alert('Share URL copied to clipboard!'); });
+            navigator.clipboard.writeText(url).then(showCopied).catch(function() {
+                prompt('Copy this URL to share your timers:', url);
+            });
         } else {
             prompt('Copy this URL to share your timers:', url);
         }
@@ -890,8 +917,12 @@
     function exportJSON() {
         document.getElementById('io-textarea').value =
             JSON.stringify(timers.map(timerToState), null, 2);
+        var errEl = document.getElementById('io-error');
+        if (errEl) errEl.textContent = '';
     }
     function importJSON() {
+        var errEl = document.getElementById('io-error');
+        if (errEl) errEl.textContent = '';
         try {
             var data = JSON.parse(document.getElementById('io-textarea').value.trim());
             if (!Array.isArray(data)) throw new Error('Expected a JSON array.');
@@ -902,7 +933,7 @@
             document.getElementById('io-section').classList.remove('open');
             syncWakeLock();
         } catch(e) {
-            alert('Import failed: ' + e.message);
+            if (errEl) errEl.textContent = 'Import failed: ' + e.message;
         }
     }
 
