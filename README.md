@@ -51,7 +51,14 @@ A full-screen countdown timer that runs entirely in the browser — no build ste
 - Progress bars with `role="progressbar"` and `aria-valuenow`
 
 ### Smart TV
-- Falls back to a file-based `localStorage` shim on Samsung Smart TVs
+- **File-based localStorage shim** — on Samsung Smart TVs where `localStorage` is unavailable, a file-backed shim is installed automatically (`smart-tv.js`) with full `setItem`, `getItem`, `removeItem`, and `clear` support
+- **In-page dialogs** — `confirm()`, `prompt()`, and `alert()` are replaced with custom modal dialogs compatible with platforms that block native dialogs (e.g. Samsung Tizen)
+- **Vendor-prefixed Fullscreen API** — `webkitRequestFullscreen`, `mozRequestFullScreen`, and `msRequestFullscreen` prefixes ensure full-screen works on all Smart TV browsers
+- **Remote control / D-pad navigation** — arrow keys move focus between buttons; the Samsung hardware Back key (`VK_BACK`, keyCode `10009`) behaves like Escape
+- **Visible focus indicator** — high-contrast focus outline on all interactive elements for TV remote navigation
+- **ES5/ES6 polyfills** — `Element.closest`, `String.padStart`, `Array.find`, `Array.findIndex` are polyfilled for older TV browser engines
+- **CSS compatibility** — `inset` shorthand replaced with explicit `top/right/bottom/left` for older WebKit-based TV browsers
+- **Changelog popup** — shows what's new on first load after an update (dismissed per version, stored in `localStorage`)
 
 ## Usage
 
@@ -102,3 +109,19 @@ index.html#timers=[{"n":"Work","m":25}]&obs=1   ← transparent background for O
 |------------|-------------|
 | `timers`   | JSON array of `{n: name, m: minutes}` objects |
 | `obs`      | Set to `1` to enable transparent OBS overlay mode |
+
+## Changelog
+
+### v1.1.0 — Smart TV Support
+- Full Smart TV / Samsung Tizen compatibility (localStorage shim, in-page dialogs, D-pad navigation, Back button, Fullscreen vendor prefixes, ES5/ES6 polyfills, CSS compatibility)
+- Added **📋 WHAT'S NEW** button in the control panel
+- Changelog popup shown automatically on first load after an update
+- Fixed missing `notif-allow-btn` element ID that caused silent JS errors
+- Replaced `URLSearchParams` with a manual parser for older TV browsers
+
+### v1.0.0 — Initial release
+- Multiple simultaneous countdown timers
+- Pomodoro session manager (Work → Short Break → Long Break cycle)
+- Sequential mode, Timer Sets, Session History
+- 6 themes, alarm sounds, font-size slider, OBS overlay mode
+- Share URL, iframe embed, PWA / offline support

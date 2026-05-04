@@ -315,6 +315,7 @@
             <button onclick="showStats()" title="Session history & focus time" aria-label="Statistics">📊 STATS</button>
             <button id="btn-clock" onclick="toggleClock()" title="Toggle clock display" aria-label="Toggle clock">⊙ CLOCK</button>
             <button onclick="showHelp()" title="How to use" aria-label="Help">? HELP</button>
+            <button id="btn-changelog" onclick="showChangelog()" title="What's new in this version" aria-label="What's new">📋 NEW</button>
             <select id="theme-select" onchange="setTheme(this.value)" aria-label="Choose theme">
                 <option value="">Dark</option>
                 <option value="light">Light</option>
@@ -527,6 +528,37 @@
                 <button id="tv-dialog-ok">OK</button>
                 <button id="tv-dialog-cancel">Cancel</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Changelog modal -->
+    <div id="changelog-modal" class="modal-overlay" style="display:none"
+         role="dialog" aria-modal="true" aria-labelledby="changelog-title">
+        <div class="modal-box">
+            <button class="modal-close" onclick="closeModal('changelog-modal')" aria-label="Close">✕</button>
+            <h2 id="changelog-title">📋 What's New</h2>
+
+            <h3 style="margin:0 0 6px;font-size:15px;color:var(--accent)">v1.1.0 — Smart TV Support</h3>
+            <ul style="margin:0 0 14px;padding-left:18px;line-height:1.75;font-size:14px">
+                <li>🖥 Full <strong>Smart TV / Samsung Tizen</strong> compatibility</li>
+                <li>🗄 <strong>localStorage shim</strong> — file-backed storage with <code>setItem</code>, <code>removeItem</code>, <code>clear</code></li>
+                <li>💬 <strong>In-page dialogs</strong> — confirm / prompt / alert replaced with custom modals (Tizen-safe)</li>
+                <li>🎮 <strong>D-pad / remote navigation</strong> — arrow keys move focus; Samsung Back key (VK_BACK) maps to Escape</li>
+                <li>🔲 <strong>Visible focus ring</strong> — high-contrast outline for TV remote users</li>
+                <li>📺 <strong>Fullscreen vendor prefixes</strong> — webkit / moz / ms support for all TV browsers</li>
+                <li>🔧 <strong>ES5/ES6 polyfills</strong> — <code>closest</code>, <code>padStart</code>, <code>Array.find</code> for older TV engines</li>
+                <li>🐛 Fixed missing <code>notif-allow-btn</code> element ID</li>
+                <li>🔗 Replaced <code>URLSearchParams</code> with manual parser for legacy browsers</li>
+            </ul>
+
+            <h3 style="margin:0 0 6px;font-size:15px;color:var(--accent)">v1.0.0 — Initial Release</h3>
+            <ul style="margin:0 0 4px;padding-left:18px;line-height:1.75;font-size:14px">
+                <li>Multiple simultaneous countdown timers</li>
+                <li>🍅 Pomodoro session manager (Work → Short Break → Long Break)</li>
+                <li>Sequential mode, Timer Sets, Session History &amp; focus time</li>
+                <li>6 themes, alarm sounds, font-size slider, OBS overlay mode</li>
+                <li>Share URL, iframe embed, PWA / offline support</li>
+            </ul>
         </div>
     </div>
 
@@ -1306,8 +1338,24 @@
     /* ════════════════════════════════════════
        MODALS
     ════════════════════════════════════════ */
+    var CHANGELOG_VERSION = '1.1.0';   // bump this string whenever new changelog entries are added
+
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
     function showHelp()   { document.getElementById('help-modal').style.display = 'flex'; }
+    function showChangelog() {
+        document.getElementById('changelog-modal').style.display = 'flex';
+        document.getElementById('btn-changelog').classList.remove('active');
+        try { localStorage.changelogSeen = CHANGELOG_VERSION; } catch(e) {}
+    }
+    function maybeShowChangelog() {
+        try {
+            if (localStorage.changelogSeen !== CHANGELOG_VERSION) {
+                document.getElementById('changelog-modal').style.display = 'flex';
+                document.getElementById('btn-changelog').classList.add('active');
+                try { localStorage.changelogSeen = CHANGELOG_VERSION; } catch(e2) {}
+            }
+        } catch(e) {}
+    }
     function setHelpLang(lang) {
         var isEn = lang === 'en';
         document.getElementById('help-content-en').style.display = isEn ? '' : 'none';
@@ -1488,6 +1536,9 @@
         if (timers.length === 0 && !localStorage.helpSeen) {
             showHelp();
             localStorage.helpSeen = '1';
+        } else {
+            // Show changelog popup if user has not seen this version yet
+            maybeShowChangelog();
         }
     } catch(e) {}
 
