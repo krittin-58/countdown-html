@@ -315,7 +315,7 @@
             <button onclick="showStats()" title="Session history & focus time" aria-label="Statistics">📊 STATS</button>
             <button id="btn-clock" onclick="toggleClock()" title="Toggle clock display" aria-label="Toggle clock">⊙ CLOCK</button>
             <button onclick="showHelp()" title="How to use" aria-label="Help">? HELP</button>
-            <button id="btn-changelog" onclick="showChangelog()" title="What's new in this version" aria-label="What's new">📋 NEW</button>
+            <button id="btn-changelog" onclick="showChangelog()" title="What's new in this version" aria-label="What's new">📋 WHAT'S NEW</button>
             <select id="theme-select" onchange="setTheme(this.value)" aria-label="Choose theme">
                 <option value="">Dark</option>
                 <option value="light">Light</option>
@@ -1338,7 +1338,7 @@
     /* ════════════════════════════════════════
        MODALS
     ════════════════════════════════════════ */
-    var CHANGELOG_VERSION = '1.1.0';   // bump this string whenever new changelog entries are added
+    var CHANGELOG_VERSION = '1.1.0';   // update this to match the current app version when adding new changelog entries
 
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
     function showHelp()   { document.getElementById('help-modal').style.display = 'flex'; }
