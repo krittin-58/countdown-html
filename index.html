@@ -298,21 +298,22 @@
         0%,100% { opacity: 1; }
         50%      { opacity: 0.3; }
     }
-    .timer-display.finished { animation: timer-finish-flash 1.5s ease-in-out 3; }
-
     /* ── Urgent card glow pulse ── */
     @keyframes card-urgent-glow {
         0%,100% { box-shadow: 0 0 0 0 transparent; }
         50%      { box-shadow: 0 0 20px 6px rgba(255,85,85,0.4); }
     }
-    .timer-card.has-urgent { animation: card-urgent-glow 1s ease-in-out infinite; }
-
     /* ── Body subtle pulse when any timer is urgent ── */
     @keyframes bg-urgent-pulse {
         0%,100% { opacity: 1; }
         50%      { opacity: 0.9; }
     }
-    body.has-urgent { animation: bg-urgent-pulse 1s ease-in-out infinite; }
+    /* Respect user's motion preference */
+    @media (prefers-reduced-motion: no-preference) {
+        .timer-display.finished { animation: timer-finish-flash 1.5s ease-in-out 3; }
+        .timer-card.has-urgent  { animation: card-urgent-glow 1s ease-in-out infinite; }
+        body.has-urgent         { animation: bg-urgent-pulse 1s ease-in-out infinite; }
+    }
 
     /* ── Secondary (small) timer-card button row ── */
     .timer-btns-sm { display:flex; gap:4px; flex-wrap:wrap; justify-content:center; margin-top:4px; }
@@ -357,7 +358,7 @@
             <button onclick="showHelp()" title="How to use" aria-label="Help">? HELP</button>
             <button id="btn-changelog" onclick="showChangelog()" title="What's new in this version" aria-label="What's new">📋 WHAT'S NEW</button>
             <select id="theme-select" onchange="setTheme(this.value)" aria-label="Choose theme">
-                <option value="auto">🌗 Auto</option>
+                <option value="auto">🌗 Auto (System)</option>
                 <option value="">Dark</option>
                 <option value="light">Light</option>
                 <option value="ocean">Ocean</option>
@@ -903,8 +904,9 @@
     function moveTimer(id, dir) {
         var idx = -1;
         timers.forEach(function(t, i){ if (t.id === id) idx = i; });
+        if (idx < 0) return;
         var newIdx = idx + dir;
-        if (idx < 0 || newIdx < 0 || newIdx >= timers.length) return;
+        if (newIdx < 0 || newIdx >= timers.length) return;
         var tmp = timers[idx]; timers[idx] = timers[newIdx]; timers[newIdx] = tmp;
         saveState();
         renderCards();
@@ -1692,18 +1694,20 @@
     /* ════════════════════════════════════════
        THEME
     ════════════════════════════════════════ */
+    var _autoThemeListenerAdded = false;
     function applyAutoTheme() {
-        var prefersDark = !(window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches);
+        var prefersDark = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)').matches : true;
         document.documentElement.dataset.theme = prefersDark ? '' : 'light';
     }
     function setTheme(theme) {
         if (theme === 'auto') {
             applyAutoTheme();
-            try {
-                window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', function() {
-                    if ((localStorage.theme || 'auto') === 'auto') applyAutoTheme();
+            if (!_autoThemeListenerAdded && window.matchMedia) {
+                _autoThemeListenerAdded = true;
+                window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() {
+                    try { if ((localStorage.getItem('theme') || 'auto') === 'auto') applyAutoTheme(); } catch(e) {}
                 });
-            } catch(e) {}
+            }
         } else {
             document.documentElement.dataset.theme = theme;
         }
@@ -1899,7 +1903,7 @@
     ════════════════════════════════════════ */
     // Theme — default to 'auto' (follows OS preference)
     try {
-        var savedTheme = localStorage.theme || 'auto';
+        var savedTheme = localStorage.getItem('theme') || 'auto';
         setTheme(savedTheme);
         document.getElementById('theme-select').value = savedTheme;
     } catch(e) { setTheme('auto'); }
