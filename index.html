@@ -1381,6 +1381,7 @@
         var params = (function(qs) {
             var p = {};
             qs.replace(/^\?/, '').split('&').forEach(function(pair) {
+                if (!pair) return;
                 var idx = pair.indexOf('=');
                 if (idx > 0) {
                     p[decodeURIComponent(pair.slice(0, idx))] =
