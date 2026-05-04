@@ -44,6 +44,22 @@ if (typeof localStorage == "undefined" && typeof FileSystem == "function") {
     lStorage.getItem = function(key) {
         return this[key];
     }
+
+    lStorage.removeItem = function(key) {
+        changed = true;
+        delete this[key];
+        this.saveFile(true);
+    }
+
+    lStorage.clear = function() {
+        changed = true;
+        for (var key in this) {
+            if (this.hasOwnProperty(key) && typeof this[key] !== 'function') {
+                delete this[key];
+            }
+        }
+        this.saveFile(true);
+    }
     
     window.localStorage = lStorage;
 }
