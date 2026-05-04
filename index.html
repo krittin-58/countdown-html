@@ -2,6 +2,53 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<!-- Smart TV localStorage shim — must load before any other script -->
+<script src="smart-tv.js"></script>
+<!-- Polyfills for Smart TV / legacy browser compatibility -->
+<script>
+(function() {
+    // Element.closest
+    if (typeof Element !== 'undefined' && !Element.prototype.closest) {
+        Element.prototype.closest = function(sel) {
+            var el = this;
+            while (el && el.nodeType === 1) {
+                if (el.matches ? el.matches(sel) : el.msMatchesSelector && el.msMatchesSelector(sel)) return el;
+                el = el.parentElement || el.parentNode;
+            }
+            return null;
+        };
+    }
+    // String.prototype.padStart
+    if (!String.prototype.padStart) {
+        String.prototype.padStart = function(targetLength, padString) {
+            var s = String(this);
+            padString = padString !== undefined ? String(padString) : ' ';
+            if (s.length >= targetLength || !padString) return s;
+            var needed = targetLength - s.length;
+            var fill = '';
+            while (fill.length < needed) fill += padString;
+            return fill.slice(0, needed) + s;
+        };
+    }
+    // Array.prototype.find
+    if (!Array.prototype.find) {
+        Array.prototype.find = function(fn) {
+            for (var i = 0; i < this.length; i++) {
+                if (fn(this[i], i, this)) return this[i];
+            }
+        };
+    }
+    // Array.prototype.findIndex
+    if (!Array.prototype.findIndex) {
+        Array.prototype.findIndex = function(fn) {
+            for (var i = 0; i < this.length; i++) {
+                if (fn(this[i], i, this)) return i;
+            }
+            return -1;
+        };
+    }
+})();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Countdown Timer</title>
 <meta name="description" content="A free, full-screen countdown timer that runs entirely in your browser. Supports multiple timers, Pomodoro sessions, themes, alarms, and offline use — no signup required.">
@@ -79,7 +126,7 @@
 
     /* ── Timers grid ── */
     #timers {
-        position: fixed; inset: 0;
+        position: fixed; top: 0; right: 0; bottom: 0; left: 0;
         display: flex; flex-wrap: wrap;
         align-items: center; justify-content: center;
         gap: 20px; padding: 20px;
@@ -195,9 +242,21 @@
     .controls-hidden *              { cursor:none !important; }
     .controls-hidden #clock         { font-size: 40px; }
 
+    /* ── Smart TV / remote control: visible focus indicator ── */
+    button:focus, select:focus, input:focus {
+        outline: 3px solid var(--accent);
+        outline-offset: 2px;
+    }
+    /* TV dialog buttons — larger tap/OK targets */
+    #tv-dialog .modal-box button {
+        min-width: 90px;
+        padding: 8px 16px;
+        font-size: 17px;
+    }
+
     /* ── Modals ── */
     .modal-overlay {
-        position: fixed; inset: 0;
+        position: fixed; top: 0; right: 0; bottom: 0; left: 0;
         background: rgba(0,0,0,0.75);
         display: flex; align-items: center; justify-content: center;
         z-index: 200;
@@ -312,7 +371,7 @@
     <!-- Notification permission banner -->
     <div id="notif-banner" role="status">
         <span id="notif-text"></span>
-        <button onclick="requestNotificationPermission()" aria-label="Allow notifications">Allow</button>
+        <button id="notif-allow-btn" onclick="requestNotificationPermission()" aria-label="Allow notifications">Allow</button>
         <button onclick="dismissNotifBanner()" aria-label="Dismiss">✕</button>
     </div>
 
@@ -457,7 +516,66 @@
         </div>
     </div>
 
+    <!-- Smart-TV-compatible confirm / prompt dialog (replaces native confirm/prompt/alert) -->
+    <div id="tv-dialog" class="modal-overlay" style="display:none"
+         role="alertdialog" aria-modal="true" aria-labelledby="tv-dialog-msg">
+        <div class="modal-box" style="max-width:420px;text-align:center">
+            <p id="tv-dialog-msg" style="margin:0 0 16px;font-size:17px;line-height:1.5;white-space:pre-line"></p>
+            <input type="text" id="tv-dialog-input" class="copy-box"
+                   style="display:none;width:100%;box-sizing:border-box;margin-bottom:12px;font-size:16px">
+            <div style="display:flex;gap:10px;justify-content:center">
+                <button id="tv-dialog-ok">OK</button>
+                <button id="tv-dialog-cancel">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <script>
+    /* ════════════════════════════════════════
+       SMART-TV COMPATIBLE DIALOGS
+       Replaces confirm() / prompt() / alert() which are unavailable
+       on Samsung Tizen and many other Smart TV platforms.
+    ════════════════════════════════════════ */
+    function _tvDialog(msg, inputDefault, onOk) {
+        var overlay = document.getElementById('tv-dialog');
+        var msgEl   = document.getElementById('tv-dialog-msg');
+        var inp     = document.getElementById('tv-dialog-input');
+        var okBtn   = document.getElementById('tv-dialog-ok');
+        var canBtn  = document.getElementById('tv-dialog-cancel');
+        var isPrompt = inputDefault !== null;
+
+        msgEl.textContent = msg;
+        inp.style.display = isPrompt ? '' : 'none';
+        if (isPrompt) inp.value = inputDefault || '';
+
+        overlay.style.display = 'flex';
+        setTimeout(function() { (isPrompt ? inp : okBtn).focus(); }, 50);
+
+        function close() {
+            overlay.style.display = 'none';
+            okBtn.onclick = canBtn.onclick = null;
+            if (isPrompt) inp.onkeydown = null;
+        }
+        okBtn.onclick  = function() { close(); onOk(isPrompt ? inp.value : true); };
+        canBtn.onclick = function() { close(); };
+        if (isPrompt) {
+            inp.onkeydown = function(e) { if (e.key === 'Enter') okBtn.click(); };
+        }
+    }
+    function tvConfirm(msg, onOk) {
+        _tvDialog(msg, null, function() { onOk(); });
+    }
+    function tvPrompt(msg, def, onOk) {
+        _tvDialog(msg, def !== undefined ? def : '', function(v) { if (v) onOk(v); });
+    }
+    function showBanner(msg, duration) {
+        var btn = document.getElementById('notif-allow-btn');
+        document.getElementById('notif-text').textContent = msg;
+        if (btn) btn.style.display = 'none';
+        document.getElementById('notif-banner').classList.add('visible');
+        setTimeout(dismissNotifBanner, duration || 3000);
+    }
+
     /* ════════════════════════════════════════
        STATE
     ════════════════════════════════════════ */
@@ -618,15 +736,16 @@
        POMODORO SESSION MANAGER
     ════════════════════════════════════════ */
     function startPomodoro() {
-        if (!confirm('Start a Pomodoro session?\nThis will clear any existing timers.')) return;
-        timers = [];
-        pomodoroState = { round: 1, phase: 'work' };
-        var t = makeTimer('🍅 Work #1', POMO_WORK);
-        pomodoroState.timerId = t.id;
-        timers.push(t);
-        saveState();
-        renderCards();
-        document.getElementById('add-form').classList.remove('visible');
+        tvConfirm('Start a Pomodoro session?\nThis will clear any existing timers.', function() {
+            timers = [];
+            pomodoroState = { round: 1, phase: 'work' };
+            var t = makeTimer('🍅 Work #1', POMO_WORK);
+            pomodoroState.timerId = t.id;
+            timers.push(t);
+            saveState();
+            renderCards();
+            document.getElementById('add-form').classList.remove('visible');
+        });
     }
     function advancePomodoro() {
         if (!pomodoroState) return;
@@ -724,32 +843,39 @@
        TIMER SETS (TEMPLATES)
     ════════════════════════════════════════ */
     function saveCurrentSet() {
-        if (timers.length === 0) { alert('No timers to save.'); return; }
-        var name = prompt('Name for this timer set:', 'My Set');
-        if (!name) return;
-        timerSets.push({
-            name: name,
-            timers: timers.map(function(t){ return { name: t.name, minutes: t.totalMs / 60000 }; })
+        if (timers.length === 0) { showBanner('No timers to save.'); return; }
+        tvPrompt('Name for this timer set:', 'My Set', function(name) {
+            timerSets.push({
+                name: name,
+                timers: timers.map(function(t){ return { name: t.name, minutes: t.totalMs / 60000 }; })
+            });
+            saveSets();
+            renderSets();
         });
-        saveSets();
-        renderSets();
     }
     function loadSet(idx) {
         var set = timerSets[idx];
         if (!set) return;
-        if (timers.length > 0 && !confirm('Load "' + set.name + '"? Current timers will be cleared.')) return;
-        timers = [];
-        set.timers.forEach(function(s){ timers.push(makeTimer(s.name, s.minutes)); });
-        if (sequentialMode) timers.forEach(function(t, i){ if (i > 0) pauseTimer(t.id); });
-        saveState();
-        renderCards();
-        document.getElementById('sets-panel').classList.remove('visible');
+        var doLoad = function() {
+            timers = [];
+            set.timers.forEach(function(s){ timers.push(makeTimer(s.name, s.minutes)); });
+            if (sequentialMode) timers.forEach(function(t, i){ if (i > 0) pauseTimer(t.id); });
+            saveState();
+            renderCards();
+            document.getElementById('sets-panel').classList.remove('visible');
+        };
+        if (timers.length > 0) {
+            tvConfirm('Load "' + set.name + '"? Current timers will be cleared.', doLoad);
+        } else {
+            doLoad();
+        }
     }
     function deleteSet(idx) {
-        if (!confirm('Delete set "' + timerSets[idx].name + '"?')) return;
-        timerSets.splice(idx, 1);
-        saveSets();
-        renderSets();
+        tvConfirm('Delete set "' + timerSets[idx].name + '"?', function() {
+            timerSets.splice(idx, 1);
+            saveSets();
+            renderSets();
+        });
     }
     function saveSets() {
         try { localStorage.timerSets = JSON.stringify(timerSets); } catch(e) {}
@@ -840,10 +966,11 @@
         document.getElementById('stats-modal').style.display = 'flex';
     }
     function clearHistory() {
-        if (!confirm('Clear all session history?')) return;
-        sessionHistory = [];
-        try { localStorage.removeItem('sessionHistory'); } catch(e) {}
-        showStats();
+        tvConfirm('Clear all session history?', function() {
+            sessionHistory = [];
+            try { localStorage.removeItem('sessionHistory'); } catch(e) {}
+            showStats();
+        });
     }
 
     /* ════════════════════════════════════════
@@ -1074,16 +1201,29 @@
         }
     }
     function toggleFullscreen() {
-        if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen && document.documentElement.requestFullscreen();
+        var el = document.documentElement;
+        var isFs = document.fullscreenElement || document.webkitFullscreenElement ||
+                   document.mozFullScreenElement || document.msFullscreenElement;
+        if (!isFs) {
+            if      (el.requestFullscreen)       el.requestFullscreen();
+            else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+            else if (el.mozRequestFullScreen)    el.mozRequestFullScreen();
+            else if (el.msRequestFullscreen)     el.msRequestFullscreen();
         } else {
-            document.exitFullscreen && document.exitFullscreen();
+            if      (document.exitFullscreen)          document.exitFullscreen();
+            else if (document.webkitExitFullscreen)    document.webkitExitFullscreen();
+            else if (document.mozCancelFullScreen)     document.mozCancelFullScreen();
+            else if (document.msExitFullscreen)        document.msExitFullscreen();
         }
     }
-    document.addEventListener('fullscreenchange', function() {
-        document.getElementById('btn-fs').textContent =
-            document.fullscreenElement ? '⛶ EXIT FS' : '⛶ FS';
-    });
+    function _onFullscreenChange() {
+        var isFs = document.fullscreenElement || document.webkitFullscreenElement ||
+                   document.mozFullScreenElement || document.msFullscreenElement;
+        document.getElementById('btn-fs').textContent = isFs ? '⛶ EXIT FS' : '⛶ FS';
+    }
+    document.addEventListener('fullscreenchange',       _onFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', _onFullscreenChange);
+    document.addEventListener('mozfullscreenchange',    _onFullscreenChange);
 
     /* ════════════════════════════════════════
        KEYBOARD SHORTCUTS
@@ -1092,6 +1232,14 @@
         var tag = e.target.tagName;
         if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
         if (e.ctrlKey || e.metaKey || e.altKey) return;
+        // Samsung TV hardware back button (VK_BACK = 10009)
+        var keyCode = e.keyCode || e.which;
+        if (keyCode === 10009) {
+            var openModal = document.querySelector('.modal-overlay[style*="flex"]');
+            if (openModal) { openModal.style.display = 'none'; return; }
+            toggleControls();
+            return;
+        }
         switch (e.key) {
             case ' ':
                 e.preventDefault();
@@ -1120,6 +1268,31 @@
                 toggleControls();
                 break;
         }
+    });
+
+    /* ════════════════════════════════════════
+       D-PAD / REMOTE CONTROL NAVIGATION
+       Arrow keys move focus between focusable elements for TV remotes.
+    ════════════════════════════════════════ */
+    document.addEventListener('keydown', function(e) {
+        var key = e.key;
+        if (key !== 'ArrowLeft' && key !== 'ArrowRight' &&
+            key !== 'ArrowUp'   && key !== 'ArrowDown') return;
+        var tag = e.target.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+        var focusable = Array.prototype.slice.call(
+            document.querySelectorAll('button:not([disabled]), input:not([disabled])')
+        ).filter(function(el) { return el.offsetParent !== null; });
+
+        var idx  = focusable.indexOf(document.activeElement);
+        var next;
+        if (key === 'ArrowRight' || key === 'ArrowDown') {
+            next = idx < focusable.length - 1 ? focusable[idx + 1] : focusable[0];
+        } else {
+            next = idx > 0 ? focusable[idx - 1] : focusable[focusable.length - 1];
+        }
+        if (next) { e.preventDefault(); next.focus(); }
     });
 
     /* ════════════════════════════════════════
@@ -1205,7 +1378,17 @@
     }
     function handleUrlParams() {
         // Legacy query-string format
-        var params  = new URLSearchParams(location.search);
+        var params = (function(qs) {
+            var p = {};
+            qs.replace(/^\?/, '').split('&').forEach(function(pair) {
+                var idx = pair.indexOf('=');
+                if (idx > 0) {
+                    p[decodeURIComponent(pair.slice(0, idx))] =
+                        decodeURIComponent(pair.slice(idx + 1).replace(/\+/g, ' '));
+                }
+            });
+            return { get: function(k) { return p.hasOwnProperty(k) ? p[k] : null; } };
+        })(location.search);
         var minutes = parseFloat(params.get('minutes'));
         var name    = params.get('name') || '';
         if (minutes > 0) { timers.push(makeTimer(name, minutes)); saveState(); return; }
@@ -1320,6 +1503,5 @@
     }
     </script>
 
-    <script src="smart-tv.js"></script>
 </body>
 </html>
