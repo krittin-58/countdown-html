@@ -255,6 +255,7 @@
             <button onclick="showShare()" title="Share / Embed / OBS" aria-label="Share">🔗 SHARE</button>
             <button onclick="showStats()" title="Session history & focus time" aria-label="Statistics">📊 STATS</button>
             <button id="btn-clock" onclick="toggleClock()" title="Toggle clock display" aria-label="Toggle clock">⊙ CLOCK</button>
+            <button onclick="showHelp()" title="How to use" aria-label="Help">? HELP</button>
             <select id="theme-select" onchange="setTheme(this.value)" aria-label="Choose theme">
                 <option value="">Dark</option>
                 <option value="light">Light</option>
@@ -342,6 +343,117 @@
             <p style="margin:10px 0 2px"><strong>OBS Browser Source</strong> (transparent background):</p>
             <textarea id="obs-url" class="copy-box" rows="2" readonly></textarea>
             <button onclick="copyBox('obs-url')" style="margin-top:4px">📋 Copy OBS URL</button>
+        </div>
+    </div>
+
+    <!-- Help / Introduction modal -->
+    <div id="help-modal" class="modal-overlay" style="display:none"
+         role="dialog" aria-modal="true" aria-labelledby="help-title">
+        <div class="modal-box">
+            <button class="modal-close" onclick="closeModal('help-modal')" aria-label="Close">✕</button>
+            <h2 id="help-title">? How to Use</h2>
+
+            <!-- Language switcher -->
+            <div style="margin-bottom:10px">
+                <button id="help-lang-en" onclick="setHelpLang('en')" class="active" aria-pressed="true">🇬🇧 EN</button>
+                <button id="help-lang-th" onclick="setHelpLang('th')" aria-pressed="false">🇹🇭 ไทย</button>
+            </div>
+
+            <!-- English content -->
+            <div id="help-content-en">
+                <p style="margin:0 0 10px"><strong>Countdown Timer</strong> — a free, full-screen timer that runs entirely in your browser. No account or installation needed.</p>
+
+                <h3 style="margin:10px 0 4px;font-size:15px;color:var(--accent)">➕ Adding a Timer</h3>
+                <ol style="margin:0 0 10px;padding-left:18px;line-height:1.7">
+                    <li>Click <strong>＋&nbsp;ADD</strong> to open the timer form.</li>
+                    <li>Optionally type a <strong>name</strong> and enter the <strong>duration in minutes</strong>.</li>
+                    <li>Click <strong>▶ START</strong> — or pick a quick preset (5m, 10m, 15m, 25m&nbsp;🍅, 45m).</li>
+                </ol>
+
+                <h3 style="margin:10px 0 4px;font-size:15px;color:var(--accent)">⏱ Timer Controls</h3>
+                <table style="border-collapse:collapse;font-size:14px;width:100%;margin-bottom:10px">
+                    <tr><td style="padding:2px 8px 2px 0"><strong>⏸ PAUSE</strong></td><td>Freeze the timer</td></tr>
+                    <tr><td style="padding:2px 8px 2px 0"><strong>▶ RESUME</strong></td><td>Continue a paused timer</td></tr>
+                    <tr><td style="padding:2px 8px 2px 0"><strong>↺ RESET</strong></td><td>Return to original duration</td></tr>
+                    <tr><td style="padding:2px 8px 2px 0"><strong>✕</strong></td><td>Remove the timer card</td></tr>
+                </table>
+
+                <h3 style="margin:10px 0 4px;font-size:15px;color:var(--accent)">🍅 Pomodoro &amp; Sequential</h3>
+                <ul style="margin:0 0 10px;padding-left:18px;line-height:1.7">
+                    <li><strong>🍅 POMO</strong> — starts an automatic Work / Break cycle (25 min work · 5 min short break · 15 min long break).</li>
+                    <li><strong>↕ SEQ</strong> — when enabled, the next timer starts automatically when the current one finishes.</li>
+                </ul>
+
+                <h3 style="margin:10px 0 4px;font-size:15px;color:var(--accent)">🔧 Other Features</h3>
+                <ul style="margin:0 0 10px;padding-left:18px;line-height:1.7">
+                    <li><strong>⊞ SETS</strong> — save and reload groups of timers.</li>
+                    <li><strong>🔗 SHARE</strong> — copy a URL or embed code for the current timers.</li>
+                    <li><strong>📊 STATS</strong> — view completed timers and today's total focus time.</li>
+                    <li><strong>HIDE / click display</strong> — hide the control panel for a clean full-screen view.</li>
+                    <li><strong>Theme dropdown</strong> — choose Dark, Light, Ocean, Sunset, Forest, or Purple.</li>
+                    <li><strong>🔊 slider</strong> — adjust alarm volume; choose Beep, Bell, Chime, or Silent.</li>
+                    <li><strong>Aa slider</strong> — scale the timer digits larger or smaller.</li>
+                </ul>
+
+                <h3 style="margin:10px 0 4px;font-size:15px;color:var(--accent)">⌨️ Keyboard Shortcuts</h3>
+                <table style="border-collapse:collapse;font-size:14px;width:100%;margin-bottom:4px">
+                    <tr><td style="padding:2px 8px 2px 0"><strong>Space</strong></td><td>Pause / Resume first active timer</td></tr>
+                    <tr><td style="padding:2px 8px 2px 0"><strong>N</strong></td><td>Open / close the Add Timer form</td></tr>
+                    <tr><td style="padding:2px 8px 2px 0"><strong>R</strong></td><td>Reset the first timer</td></tr>
+                    <tr><td style="padding:2px 8px 2px 0"><strong>F</strong></td><td>Toggle fullscreen</td></tr>
+                    <tr><td style="padding:2px 8px 2px 0"><strong>Esc</strong></td><td>Close an open modal; otherwise hide / show controls</td></tr>
+                </table>
+
+                <p style="margin:12px 0 0;font-size:13px;opacity:0.7">Your timers and settings are saved automatically in your browser's local storage.</p>
+            </div>
+
+            <!-- Thai content -->
+            <div id="help-content-th" style="display:none">
+                <p style="margin:0 0 10px"><strong>Countdown Timer</strong> — นาฬิกานับถอยหลังฟรี แสดงผลแบบเต็มหน้าจอ ทำงานในเบราว์เซอร์ของคุณทั้งหมด ไม่ต้องสมัครบัญชีหรือติดตั้งโปรแกรมใด ๆ</p>
+
+                <h3 style="margin:10px 0 4px;font-size:15px;color:var(--accent)">➕ การเพิ่มตัวจับเวลา</h3>
+                <ol style="margin:0 0 10px;padding-left:18px;line-height:1.9">
+                    <li>คลิก <strong>＋&nbsp;ADD</strong> เพื่อเปิดฟอร์มตัวจับเวลา</li>
+                    <li>พิมพ์ <strong>ชื่อ</strong> (ไม่บังคับ) และกรอก <strong>ระยะเวลาเป็นนาที</strong></li>
+                    <li>คลิก <strong>▶ START</strong> หรือเลือกปุ่มด่วน (5m, 10m, 15m, 25m&nbsp;🍅, 45m)</li>
+                </ol>
+
+                <h3 style="margin:10px 0 4px;font-size:15px;color:var(--accent)">⏱ ปุ่มควบคุมตัวจับเวลา</h3>
+                <table style="border-collapse:collapse;font-size:14px;width:100%;margin-bottom:10px">
+                    <tr><td style="padding:2px 8px 2px 0"><strong>⏸ PAUSE</strong></td><td>หยุดตัวจับเวลาชั่วคราว</td></tr>
+                    <tr><td style="padding:2px 8px 2px 0"><strong>▶ RESUME</strong></td><td>เดินต่อหลังจากหยุดชั่วคราว</td></tr>
+                    <tr><td style="padding:2px 8px 2px 0"><strong>↺ RESET</strong></td><td>รีเซ็ตกลับสู่ระยะเวลาเดิม</td></tr>
+                    <tr><td style="padding:2px 8px 2px 0"><strong>✕</strong></td><td>ลบการ์ดตัวจับเวลาออก</td></tr>
+                </table>
+
+                <h3 style="margin:10px 0 4px;font-size:15px;color:var(--accent)">🍅 โพโมโดโร &amp; โหมดลำดับ</h3>
+                <ul style="margin:0 0 10px;padding-left:18px;line-height:1.9">
+                    <li><strong>🍅 POMO</strong> — เริ่มรอบทำงาน/พักแบบอัตโนมัติ (ทำงาน 25 น. · พักสั้น 5 น. · พักยาว 15 น.)</li>
+                    <li><strong>↕ SEQ</strong> — เมื่อเปิดใช้งาน ตัวจับเวลาถัดไปจะเริ่มทำงานอัตโนมัติเมื่อตัวปัจจุบันหมดเวลา</li>
+                </ul>
+
+                <h3 style="margin:10px 0 4px;font-size:15px;color:var(--accent)">🔧 ฟีเจอร์อื่น ๆ</h3>
+                <ul style="margin:0 0 10px;padding-left:18px;line-height:1.9">
+                    <li><strong>⊞ SETS</strong> — บันทึกและโหลดกลุ่มตัวจับเวลา</li>
+                    <li><strong>🔗 SHARE</strong> — คัดลอก URL หรือโค้ด embed สำหรับตัวจับเวลาที่ตั้งไว้</li>
+                    <li><strong>📊 STATS</strong> — ดูประวัติตัวจับเวลาที่เสร็จสิ้นและเวลาโฟกัสรวมของวันนี้</li>
+                    <li><strong>HIDE / คลิกที่หน้าจอตัวเลข</strong> — ซ่อนแผงควบคุมเพื่อมุมมองที่สะอาดตา</li>
+                    <li><strong>เมนูธีม</strong> — เลือก Dark, Light, Ocean, Sunset, Forest หรือ Purple</li>
+                    <li><strong>แถบเลื่อน 🔊</strong> — ปรับระดับเสียงเตือน; เลือก Beep, Bell, Chime หรือ Silent</li>
+                    <li><strong>แถบเลื่อน Aa</strong> — ปรับขนาดตัวเลขให้ใหญ่หรือเล็กลง</li>
+                </ul>
+
+                <h3 style="margin:10px 0 4px;font-size:15px;color:var(--accent)">⌨️ คีย์ลัด</h3>
+                <table style="border-collapse:collapse;font-size:14px;width:100%;margin-bottom:4px">
+                    <tr><td style="padding:2px 8px 2px 0"><strong>Space</strong></td><td>หยุด/เดินต่อตัวจับเวลาที่กำลังทำงาน</td></tr>
+                    <tr><td style="padding:2px 8px 2px 0"><strong>N</strong></td><td>เปิด/ปิดฟอร์มเพิ่มตัวจับเวลา</td></tr>
+                    <tr><td style="padding:2px 8px 2px 0"><strong>R</strong></td><td>รีเซ็ตตัวจับเวลาแรก</td></tr>
+                    <tr><td style="padding:2px 8px 2px 0"><strong>F</strong></td><td>เปิด/ปิดโหมดเต็มหน้าจอ</td></tr>
+                    <tr><td style="padding:2px 8px 2px 0"><strong>Esc</strong></td><td>ปิดป๊อปอัปที่เปิดอยู่; หรือซ่อน/แสดงแผงควบคุม</td></tr>
+                </table>
+
+                <p style="margin:12px 0 0;font-size:13px;opacity:0.7">ตัวจับเวลาและการตั้งค่าทั้งหมดจะถูกบันทึกอัตโนมัติใน local storage ของเบราว์เซอร์</p>
+            </div>
         </div>
     </div>
 
@@ -1022,6 +1134,19 @@
        MODALS
     ════════════════════════════════════════ */
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    function showHelp()   { document.getElementById('help-modal').style.display = 'flex'; }
+    function setHelpLang(lang) {
+        var isEn = lang === 'en';
+        document.getElementById('help-content-en').style.display = isEn ? '' : 'none';
+        document.getElementById('help-content-th').style.display = isEn ? 'none' : '';
+        var btnEn = document.getElementById('help-lang-en');
+        var btnTh = document.getElementById('help-lang-th');
+        btnEn.classList.toggle('active', isEn);
+        btnTh.classList.toggle('active', !isEn);
+        btnEn.setAttribute('aria-pressed', isEn ? 'true' : 'false');
+        btnTh.setAttribute('aria-pressed', isEn ? 'false' : 'true');
+        try { localStorage.helpLang = lang; } catch(e) {}
+    }
     var overlays = document.querySelectorAll('.modal-overlay');
     Array.prototype.forEach.call(overlays, function(el) {
         el.addEventListener('click', function(e){ if (e.target === el) el.style.display = 'none'; });
@@ -1173,6 +1298,17 @@
 
     // Show add form if no timers
     if (timers.length === 0) document.getElementById('add-form').classList.add('visible');
+
+    // Show help on very first visit (no saved timers, help not yet seen)
+    try {
+        if (timers.length === 0 && !localStorage.helpSeen) {
+            showHelp();
+            localStorage.helpSeen = '1';
+        }
+    } catch(e) {}
+
+    // Restore preferred help language (falls back to English if not set or inaccessible)
+    try { if (localStorage.helpLang === 'th') setHelpLang('th'); } catch(e) {}
 
     renderCards();
     renderPresets();
