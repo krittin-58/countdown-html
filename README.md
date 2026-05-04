@@ -10,25 +10,37 @@ A full-screen countdown timer that runs entirely in the browser — no build ste
 - **Preset durations** — built-in 5 m, 10 m, 15 m, 25 m 🍅, 45 m; plus **save your own custom presets**
 - **Timer names** — label each timer (e.g. "Meeting", "Lunch break")
 - **Timer Sets** — save and restore groups of timers (e.g. a full workshop schedule)
+- **+1m / +5m** — add time to any running or paused timer on the fly
+- **Duplicate** — clone a timer card with one click (⧉)
+- **Reorder** — move timer cards up or down (↑/↓)
+- **🔁 Loop mode** — timer restarts automatically when it finishes
+- **⏱ Stopwatch mode** — switch any timer to count up from zero
 - **Progress bar** — visual fill showing time remaining vs. total
 - **Urgent mode** — when < 60 s remain, the display switches to seconds-only in large red text
+- **Finish animation** — flash effect when a timer completes
 - **Persistent state** — timers survive a page refresh via `localStorage`
 
 ### Productivity
 - **🍅 Pomodoro Session Manager** — auto-cycles Work → Short Break → Work → Long Break with round counter
+- **⚙️ Custom Pomodoro durations** — set Work, Short Break, Long Break times and interval before starting
 - **↕ Sequential Mode** — automatically starts the next timer when the current one finishes
 - **📊 Session History** — logs every completed timer; shows today's total focus time
+- **🎯 Daily focus goal** — set a target in minutes; track progress with a bar in Stats
+- **📅 7-day focus chart** — bar chart of your focus time for the last 7 days
+- **⬇️ Export history** — download session history as a CSV file
 
 ### Notifications & Audio
 - **Browser Notifications** — get a desktop alert when a timer finishes, even in a background tab
 - **Alarm sounds** — choose from Beep (default), Bell, Chime, or Silent
 - **Volume control** — adjust the alarm volume with a slider
+- **Sound preview** — hear a short sample when you change the alarm sound
 
 ### Visual
-- **Themes** — Dark, Light, Ocean, Sunset, Forest, Purple
+- **Themes** — Auto (follows OS dark/light), Dark, Light, Ocean, Sunset, Forest, Purple
 - **⊙ Clock** — toggle a live clock alongside your timers
 - **Font size slider** — scale up timer digits for projectors or large displays
 - **Fullscreen** — one click to enter / exit
+- **Urgent card glow** — pulsing red glow on a timer card when < 60 s remain
 
 ### Sharing & Integration
 - **🔗 Share URL** — encode all current timers into a URL to share with others
@@ -42,6 +54,8 @@ A full-screen countdown timer that runs entirely in the browser — no build ste
 | `Space` | Pause / Resume the first active timer |
 | `N` | Open the Add Timer form |
 | `R` | Reset the first timer |
+| `A` | Pause **all** running timers |
+| `S` | Resume **all** paused timers |
 | `F` | Toggle fullscreen |
 | `Esc` | Close modal / hide controls |
 
@@ -111,6 +125,23 @@ index.html#timers=[{"n":"Work","m":25}]&obs=1   ← transparent background for O
 | `obs`      | Set to `1` to enable transparent OBS overlay mode |
 
 ## Changelog
+
+### v1.2.0 — More Features
+- **⏱ Stopwatch mode** — toggle any timer to count up from zero
+- **🔁 Loop mode** — timer restarts automatically when it finishes
+- **+1m / +5m buttons** — add time to a running or paused timer on the fly
+- **⧉ Duplicate** — clone any timer card
+- **↑↓ Reorder** — move timer cards up and down
+- **⚙️ Custom Pomodoro durations** — set Work, Short Break, Long Break & interval
+- **🌗 Auto theme** — follows your OS dark/light mode preference
+- **🔔 Sound preview** — plays a sample when you change the alarm sound
+- **🏷️ Tab title countdown** — browser tab shows time remaining while a timer runs
+- **💡 Wake Lock** — prevents screen sleep while a timer is running
+- **📅 7-day focus chart** in the Stats panel
+- **🎯 Daily focus goal** with progress bar in Stats
+- **⬇️ Export history to CSV**
+- **⌨️ New shortcuts** — `A` = pause all, `S` = resume all
+- **✨ Finish animation** & urgent card glow
 
 ### v1.1.0 — Smart TV Support
 - Full Smart TV / Samsung Tizen compatibility (localStorage shim, in-page dialogs, D-pad navigation, Back button, Fullscreen vendor prefixes, ES5/ES6 polyfills, CSS compatibility)

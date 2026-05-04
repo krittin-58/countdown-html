@@ -292,6 +292,43 @@
         font-size: 14px; text-align: center; white-space: nowrap;
     }
     #notif-banner.visible { display: block; }
+
+    /* ── Finish animation ── */
+    @keyframes timer-finish-flash {
+        0%,100% { opacity: 1; }
+        50%      { opacity: 0.3; }
+    }
+    .timer-display.finished { animation: timer-finish-flash 1.5s ease-in-out 3; }
+
+    /* ── Urgent card glow pulse ── */
+    @keyframes card-urgent-glow {
+        0%,100% { box-shadow: 0 0 0 0 transparent; }
+        50%      { box-shadow: 0 0 20px 6px rgba(255,85,85,0.4); }
+    }
+    .timer-card.has-urgent { animation: card-urgent-glow 1s ease-in-out infinite; }
+
+    /* ── Body subtle pulse when any timer is urgent ── */
+    @keyframes bg-urgent-pulse {
+        0%,100% { opacity: 1; }
+        50%      { opacity: 0.9; }
+    }
+    body.has-urgent { animation: bg-urgent-pulse 1s ease-in-out infinite; }
+
+    /* ── Secondary (small) timer-card button row ── */
+    .timer-btns-sm { display:flex; gap:4px; flex-wrap:wrap; justify-content:center; margin-top:4px; }
+    .timer-btns-sm button { font-size: 13px; padding: 2px 5px; opacity: 0.75; }
+    .timer-btns-sm button:hover { opacity: 1; }
+    .timer-btns-sm button.active { opacity: 1; border-color: var(--accent); }
+    .controls-hidden .timer-btns-sm { display: none; }
+
+    /* ── Pomo settings panel ── */
+    #pomo-settings { margin-top: 6px; font-size: 13px; display: none; }
+    #pomo-settings label { margin-right: 8px; white-space: nowrap; }
+    #pomo-settings input[type=number] {
+        width: 46px; background: var(--input-bg);
+        border: 1px solid var(--input-border); color: var(--input-fg);
+        font-family: inherit; font-size: 13px; padding: 2px 4px;
+    }
 </style>
 </head>
 <body>
@@ -312,6 +349,7 @@
             <button onclick="toggleControls()" title="Hide/show controls  [Esc]" aria-label="Toggle controls">HIDE</button>
             <button id="btn-fs" onclick="toggleFullscreen()" title="Fullscreen  [F]" aria-label="Toggle fullscreen">⛶ FS</button>
             <button id="btn-pomo" onclick="startPomodoro()" title="Start Pomodoro session" aria-label="Start Pomodoro">🍅 POMO</button>
+            <button onclick="togglePomoSettings()" title="Pomodoro duration settings" aria-label="Pomodoro settings">⚙️</button>
             <button id="btn-seq" onclick="toggleSequential()" title="Sequential mode — start next timer automatically" aria-label="Toggle sequential mode">↕ SEQ</button>
             <button onclick="showShare()" title="Share / Embed / OBS" aria-label="Share">🔗 SHARE</button>
             <button onclick="showStats()" title="Session history & focus time" aria-label="Statistics">📊 STATS</button>
@@ -319,6 +357,7 @@
             <button onclick="showHelp()" title="How to use" aria-label="Help">? HELP</button>
             <button id="btn-changelog" onclick="showChangelog()" title="What's new in this version" aria-label="What's new">📋 WHAT'S NEW</button>
             <select id="theme-select" onchange="setTheme(this.value)" aria-label="Choose theme">
+                <option value="auto">🌗 Auto</option>
                 <option value="">Dark</option>
                 <option value="light">Light</option>
                 <option value="ocean">Ocean</option>
@@ -361,6 +400,16 @@
             </div>
         </div>
 
+        <!-- Pomodoro settings panel -->
+        <div id="pomo-settings">
+            <strong>🍅 Pomodoro Settings</strong><br>
+            <label>Work: <input type="number" id="pomo-work-input" value="25" min="1" max="120"> min</label>
+            <label>Short Break: <input type="number" id="pomo-short-input" value="5" min="1" max="60"> min</label>
+            <label>Long Break: <input type="number" id="pomo-long-input" value="15" min="1" max="120"> min</label>
+            <label>Long every: <input type="number" id="pomo-every-input" value="4" min="2" max="10"> rounds</label>
+            <button onclick="savePomoSettings()" style="margin-top:4px">💾 Save</button>
+        </div>
+
         <!-- Timer sets panel -->
         <div id="sets-panel">
             <button onclick="saveCurrentSet()" style="font-size:14px" aria-label="Save current timers as a set">💾 Save Current Set</button>
@@ -368,7 +417,7 @@
         </div>
 
         <!-- Keyboard hints -->
-        <div id="shortcuts-hint">Space=pause  N=add  R=reset  F=fullscreen  Esc=hide</div>
+        <div id="shortcuts-hint">Space=pause  N=add  R=reset  F=fullscreen  A=pause all  S=resume all  Esc=hide</div>
     </div>
 
     <!-- Notification permission banner -->
@@ -438,11 +487,17 @@
                     <tr><td style="padding:2px 8px 2px 0"><strong>▶ RESUME</strong></td><td>Continue a paused timer</td></tr>
                     <tr><td style="padding:2px 8px 2px 0"><strong>↺ RESET</strong></td><td>Return to original duration</td></tr>
                     <tr><td style="padding:2px 8px 2px 0"><strong>✕</strong></td><td>Remove the timer card</td></tr>
+                    <tr><td style="padding:2px 8px 2px 0"><strong>+1m / +5m</strong></td><td>Add time to a running or paused timer</td></tr>
+                    <tr><td style="padding:2px 8px 2px 0"><strong>🔁</strong></td><td>Loop — restart automatically when done</td></tr>
+                    <tr><td style="padding:2px 8px 2px 0"><strong>⏱</strong></td><td>Stopwatch — switch to count-up mode</td></tr>
+                    <tr><td style="padding:2px 8px 2px 0"><strong>↑ / ↓</strong></td><td>Move timer up or down in the list</td></tr>
+                    <tr><td style="padding:2px 8px 2px 0"><strong>⧉</strong></td><td>Duplicate the timer card</td></tr>
                 </table>
 
                 <h3 style="margin:10px 0 4px;font-size:15px;color:var(--accent)">🍅 Pomodoro &amp; Sequential</h3>
                 <ul style="margin:0 0 10px;padding-left:18px;line-height:1.7">
                     <li><strong>🍅 POMO</strong> — starts an automatic Work / Break cycle (25 min work · 5 min short break · 15 min long break).</li>
+                    <li><strong>⚙️</strong> next to POMO — customise Work, Short Break, Long Break durations and interval.</li>
                     <li><strong>↕ SEQ</strong> — when enabled, the next timer starts automatically when the current one finishes.</li>
                 </ul>
 
@@ -450,10 +505,10 @@
                 <ul style="margin:0 0 10px;padding-left:18px;line-height:1.7">
                     <li><strong>⊞ SETS</strong> — save and reload groups of timers.</li>
                     <li><strong>🔗 SHARE</strong> — copy a URL or embed code for the current timers.</li>
-                    <li><strong>📊 STATS</strong> — view completed timers and today's total focus time.</li>
+                    <li><strong>📊 STATS</strong> — view completed timers, 7-day focus chart, daily goal, and export CSV.</li>
                     <li><strong>HIDE / click display</strong> — hide the control panel for a clean full-screen view.</li>
-                    <li><strong>Theme dropdown</strong> — choose Dark, Light, Ocean, Sunset, Forest, or Purple.</li>
-                    <li><strong>🔊 slider</strong> — adjust alarm volume; choose Beep, Bell, Chime, or Silent.</li>
+                    <li><strong>Theme dropdown</strong> — Auto (follows OS), Dark, Light, Ocean, Sunset, Forest, or Purple.</li>
+                    <li><strong>🔊 slider</strong> — adjust alarm volume; choose Beep, Bell, Chime, or Silent (preview plays on change).</li>
                     <li><strong>Aa slider</strong> — scale the timer digits larger or smaller.</li>
                 </ul>
 
@@ -462,6 +517,8 @@
                     <tr><td style="padding:2px 8px 2px 0"><strong>Space</strong></td><td>Pause / Resume first active timer</td></tr>
                     <tr><td style="padding:2px 8px 2px 0"><strong>N</strong></td><td>Open / close the Add Timer form</td></tr>
                     <tr><td style="padding:2px 8px 2px 0"><strong>R</strong></td><td>Reset the first timer</td></tr>
+                    <tr><td style="padding:2px 8px 2px 0"><strong>A</strong></td><td>Pause all running timers</td></tr>
+                    <tr><td style="padding:2px 8px 2px 0"><strong>S</strong></td><td>Resume all paused timers</td></tr>
                     <tr><td style="padding:2px 8px 2px 0"><strong>F</strong></td><td>Toggle fullscreen</td></tr>
                     <tr><td style="padding:2px 8px 2px 0"><strong>Esc</strong></td><td>Close an open modal; otherwise hide / show controls</td></tr>
                 </table>
@@ -491,17 +548,23 @@
                 <h3 style="margin:10px 0 4px;font-size:15px;color:var(--accent)">🍅 โพโมโดโร &amp; โหมดลำดับ</h3>
                 <ul style="margin:0 0 10px;padding-left:18px;line-height:1.9">
                     <li><strong>🍅 POMO</strong> — เริ่มรอบทำงาน/พักแบบอัตโนมัติ (ทำงาน 25 น. · พักสั้น 5 น. · พักยาว 15 น.)</li>
+                    <li><strong>⚙️</strong> ถัดจาก POMO — ปรับเวลาทำงาน, พักสั้น, พักยาว และรอบก่อนพักยาวได้เอง</li>
                     <li><strong>↕ SEQ</strong> — เมื่อเปิดใช้งาน ตัวจับเวลาถัดไปจะเริ่มทำงานอัตโนมัติเมื่อตัวปัจจุบันหมดเวลา</li>
                 </ul>
 
                 <h3 style="margin:10px 0 4px;font-size:15px;color:var(--accent)">🔧 ฟีเจอร์อื่น ๆ</h3>
                 <ul style="margin:0 0 10px;padding-left:18px;line-height:1.9">
+                    <li><strong>+1m / +5m</strong> — เพิ่มเวลาให้ Timer ที่กำลังเดินอยู่</li>
+                    <li><strong>🔁</strong> — Loop: รีสตาร์ทอัตโนมัติเมื่อหมดเวลา</li>
+                    <li><strong>⏱</strong> — Stopwatch: นับเวลาขึ้นจาก 0</li>
+                    <li><strong>↑/↓</strong> — สลับลำดับ Timer card</li>
+                    <li><strong>⧉</strong> — ทำสำเนา Timer card</li>
                     <li><strong>⊞ SETS</strong> — บันทึกและโหลดกลุ่มตัวจับเวลา</li>
                     <li><strong>🔗 SHARE</strong> — คัดลอก URL หรือโค้ด embed สำหรับตัวจับเวลาที่ตั้งไว้</li>
-                    <li><strong>📊 STATS</strong> — ดูประวัติตัวจับเวลาที่เสร็จสิ้นและเวลาโฟกัสรวมของวันนี้</li>
+                    <li><strong>📊 STATS</strong> — ดูกราฟ 7 วัน, เป้าหมายรายวัน, ส่งออก CSV</li>
                     <li><strong>HIDE / คลิกที่หน้าจอตัวเลข</strong> — ซ่อนแผงควบคุมเพื่อมุมมองที่สะอาดตา</li>
-                    <li><strong>เมนูธีม</strong> — เลือก Dark, Light, Ocean, Sunset, Forest หรือ Purple</li>
-                    <li><strong>แถบเลื่อน 🔊</strong> — ปรับระดับเสียงเตือน; เลือก Beep, Bell, Chime หรือ Silent</li>
+                    <li><strong>เมนูธีม</strong> — Auto (ตามระบบ), Dark, Light, Ocean, Sunset, Forest หรือ Purple</li>
+                    <li><strong>แถบเลื่อน 🔊</strong> — ปรับระดับเสียงเตือน; เลือก Beep, Bell, Chime หรือ Silent (เล่นตัวอย่างเมื่อเปลี่ยน)</li>
                     <li><strong>แถบเลื่อน Aa</strong> — ปรับขนาดตัวเลขให้ใหญ่หรือเล็กลง</li>
                 </ul>
 
@@ -510,6 +573,8 @@
                     <tr><td style="padding:2px 8px 2px 0"><strong>Space</strong></td><td>หยุด/เดินต่อตัวจับเวลาที่กำลังทำงาน</td></tr>
                     <tr><td style="padding:2px 8px 2px 0"><strong>N</strong></td><td>เปิด/ปิดฟอร์มเพิ่มตัวจับเวลา</td></tr>
                     <tr><td style="padding:2px 8px 2px 0"><strong>R</strong></td><td>รีเซ็ตตัวจับเวลาแรก</td></tr>
+                    <tr><td style="padding:2px 8px 2px 0"><strong>A</strong></td><td>หยุดตัวจับเวลาทั้งหมดที่กำลังเดิน</td></tr>
+                    <tr><td style="padding:2px 8px 2px 0"><strong>S</strong></td><td>เดินต่อตัวจับเวลาทั้งหมดที่หยุดอยู่</td></tr>
                     <tr><td style="padding:2px 8px 2px 0"><strong>F</strong></td><td>เปิด/ปิดโหมดเต็มหน้าจอ</td></tr>
                     <tr><td style="padding:2px 8px 2px 0"><strong>Esc</strong></td><td>ปิดป๊อปอัปที่เปิดอยู่; หรือซ่อน/แสดงแผงควบคุม</td></tr>
                 </table>
@@ -539,6 +604,25 @@
         <div class="modal-box">
             <button class="modal-close" onclick="closeModal('changelog-modal')" aria-label="Close">✕</button>
             <h2 id="changelog-title">📋 What's New</h2>
+
+            <h3 style="margin:0 0 6px;font-size:15px;color:var(--accent)">v1.2.0 — More Features</h3>
+            <ul style="margin:0 0 14px;padding-left:18px;line-height:1.75;font-size:14px">
+                <li>⏱ <strong>Stopwatch mode</strong> — toggle any timer to count up from zero</li>
+                <li>🔁 <strong>Loop mode</strong> — timer restarts automatically when it finishes</li>
+                <li>➕ <strong>+1m / +5m buttons</strong> — add time to a running timer on the fly</li>
+                <li>⧉ <strong>Duplicate</strong> — clone any timer card</li>
+                <li>↑↓ <strong>Reorder timers</strong> — move cards up and down</li>
+                <li>⚙️ <strong>Custom Pomodoro durations</strong> — set Work, Short Break, Long Break &amp; interval</li>
+                <li>🌗 <strong>Auto theme</strong> — follows your OS dark/light preference</li>
+                <li>🔔 <strong>Sound preview</strong> — hear the alarm when you change the sound dropdown</li>
+                <li>🏷️ <strong>Tab title countdown</strong> — browser tab shows time remaining</li>
+                <li>💡 <strong>Wake Lock</strong> — prevents screen sleep while a timer is running</li>
+                <li>📅 <strong>7-day focus chart</strong> in the Stats panel</li>
+                <li>🎯 <strong>Daily focus goal</strong> with progress bar in Stats</li>
+                <li>⬇️ <strong>Export history to CSV</strong></li>
+                <li>⌨️ <strong>New shortcuts</strong> — <kbd>A</kbd> = pause all, <kbd>S</kbd> = resume all</li>
+                <li>✨ <strong>Finish animation</strong> &amp; urgent card glow</li>
+            </ul>
 
             <h3 style="margin:0 0 6px;font-size:15px;color:var(--accent)">v1.1.0 — Smart TV Support</h3>
             <ul style="margin:0 0 14px;padding-left:18px;line-height:1.75;font-size:14px">
@@ -624,6 +708,8 @@
     var sessionHistory = [];
     var clockVisible   = false;
     var pomodoroState  = null;         // {round, phase, timerId}
+    var wakeLock       = null;         // Screen Wake Lock API
+    var dailyGoal      = 0;            // daily focus goal in minutes (0 = no goal)
 
     var POMO_WORK       = 25;
     var POMO_SHORT      = 5;
@@ -669,6 +755,15 @@
     function setSound(s) {
         soundType = s;
         try { localStorage.soundType = s; } catch(e) {}
+        previewSound();
+    }
+    function previewSound() {
+        if (soundType === 'silent') return;
+        try {
+            if      (soundType === 'bell')  playTone(440, 0, 0.6, 0.5);
+            else if (soundType === 'chime') playTone(523, 0, 0.5, 0.4);
+            else                            playTone(880, 0, 0.25, 0.4);
+        } catch(e) {}
     }
 
     /* ════════════════════════════════════════
@@ -716,7 +811,8 @@
             id: nextId++, name: name || '',
             totalMs: ms, remainingMs: ms,
             endTime: Date.now() + ms,
-            isPaused: false, hasFinished: false, hasPlayedSound: false
+            isPaused: false, hasFinished: false, hasPlayedSound: false,
+            loop: false, countUp: false, countUpStart: 0
         };
     }
     function getRemaining(t) {
@@ -732,23 +828,34 @@
     }
     function pauseTimer(id) {
         var t = findTimer(id);
-        if (!t || t.isPaused || t.hasFinished) return;
-        t.remainingMs = Math.max(0, t.endTime - Date.now());
+        if (!t || t.isPaused || (!t.countUp && t.hasFinished)) return;
+        t.remainingMs = t.countUp
+            ? Date.now() - t.countUpStart
+            : Math.max(0, t.endTime - Date.now());
         t.isPaused = true;
         saveState();
     }
     function resumeTimer(id) {
         var t = findTimer(id);
         if (!t || !t.isPaused) return;
-        t.endTime = Date.now() + t.remainingMs;
+        if (t.countUp) {
+            t.countUpStart = Date.now() - t.remainingMs;
+        } else {
+            t.endTime = Date.now() + t.remainingMs;
+        }
         t.isPaused = false;
         saveState();
     }
     function resetTimer(id) {
         var t = findTimer(id);
         if (!t) return;
-        t.remainingMs = t.totalMs;
-        t.endTime = Date.now() + t.totalMs;
+        if (t.countUp) {
+            t.countUpStart = Date.now();
+            t.remainingMs  = 0;
+        } else {
+            t.remainingMs = t.totalMs;
+            t.endTime     = Date.now() + t.totalMs;
+        }
         t.isPaused = false;
         t.hasFinished = false;
         t.hasPlayedSound = false;
@@ -764,6 +871,68 @@
         var t = findTimer(id);
         if (!t) return;
         if (t.isPaused) resumeTimer(id); else pauseTimer(id);
+    }
+
+    /* ════════════════════════════════════════
+       TIMER UTILITIES — Add time, Duplicate, Reorder, Loop, Count-up
+    ════════════════════════════════════════ */
+    function addTime(id, minutes) {
+        var t = findTimer(id);
+        if (!t || t.countUp) return;
+        var ms = minutes * 60000;
+        t.totalMs += ms;
+        if (t.isPaused) {
+            t.remainingMs += ms;
+        } else if (!t.hasFinished) {
+            t.endTime += ms;
+        }
+        t.hasFinished    = false;
+        t.hasPlayedSound = false;
+        saveState();
+    }
+    function duplicateTimer(id) {
+        var t = findTimer(id);
+        if (!t) return;
+        var newT = makeTimer(t.name, t.totalMs / 60000);
+        newT.loop = t.loop;
+        if (sequentialMode) newT.isPaused = true;
+        timers.push(newT);
+        saveState();
+        renderCards();
+    }
+    function moveTimer(id, dir) {
+        var idx = -1;
+        timers.forEach(function(t, i){ if (t.id === id) idx = i; });
+        var newIdx = idx + dir;
+        if (idx < 0 || newIdx < 0 || newIdx >= timers.length) return;
+        var tmp = timers[idx]; timers[idx] = timers[newIdx]; timers[newIdx] = tmp;
+        saveState();
+        renderCards();
+    }
+    function toggleLoop(id) {
+        var t = findTimer(id);
+        if (!t) return;
+        t.loop = !t.loop;
+        saveState();
+    }
+    function toggleCountUp(id) {
+        var t = findTimer(id);
+        if (!t) return;
+        t.countUp = !t.countUp;
+        if (t.countUp) {
+            t.countUpStart   = Date.now();
+            t.remainingMs    = 0;
+            t.isPaused       = false;
+            t.hasFinished    = false;
+            t.hasPlayedSound = true;   // no alarm in stopwatch mode
+        } else {
+            t.endTime        = Date.now() + t.totalMs;
+            t.remainingMs    = t.totalMs;
+            t.isPaused       = false;
+            t.hasFinished    = false;
+            t.hasPlayedSound = false;
+        }
+        saveState();
     }
 
     /* ════════════════════════════════════════
@@ -799,6 +968,42 @@
         saveState();
         renderCards();
         showNotification('🍅 Pomodoro', 'Starting: ' + t.name);
+    }
+
+    /* ────────────────────────────────────────
+       POMODORO SETTINGS
+    ──────────────────────────────────────── */
+    function togglePomoSettings() {
+        var panel = document.getElementById('pomo-settings');
+        if (panel.style.display === 'block') {
+            panel.style.display = 'none';
+        } else {
+            panel.style.display = 'block';
+            document.getElementById('pomo-work-input').value  = POMO_WORK;
+            document.getElementById('pomo-short-input').value = POMO_SHORT;
+            document.getElementById('pomo-long-input').value  = POMO_LONG;
+            document.getElementById('pomo-every-input').value = POMO_LONG_EVERY;
+        }
+    }
+    function savePomoSettings() {
+        POMO_WORK       = Math.max(1, parseInt(document.getElementById('pomo-work-input').value)  || 25);
+        POMO_SHORT      = Math.max(1, parseInt(document.getElementById('pomo-short-input').value) || 5);
+        POMO_LONG       = Math.max(1, parseInt(document.getElementById('pomo-long-input').value)  || 15);
+        POMO_LONG_EVERY = Math.max(2, parseInt(document.getElementById('pomo-every-input').value) || 4);
+        try { localStorage.pomoSettings = JSON.stringify({ work: POMO_WORK, short: POMO_SHORT, long: POMO_LONG, every: POMO_LONG_EVERY }); } catch(e) {}
+        showBanner('Pomodoro settings saved.');
+        document.getElementById('pomo-settings').style.display = 'none';
+    }
+    function loadPomoSettings() {
+        try {
+            var r = localStorage.pomoSettings;
+            if (!r) return;
+            var s = JSON.parse(r);
+            POMO_WORK       = s.work  || 25;
+            POMO_SHORT      = s.short || 5;
+            POMO_LONG       = s.long  || 15;
+            POMO_LONG_EVERY = s.every || 4;
+        } catch(e) {}
     }
 
     /* ════════════════════════════════════════
@@ -972,11 +1177,84 @@
             return e.completedAt >= start.getTime() ? sum + e.minutes : sum;
         }, 0);
     }
+    function build7DayChart() {
+        var days = [];
+        var maxMin = 0;
+        for (var i = 6; i >= 0; i--) {
+            var d = new Date();
+            d.setDate(d.getDate() - i);
+            d.setHours(0, 0, 0, 0);
+            var end = new Date(d.getTime());
+            end.setHours(23, 59, 59, 999);
+            var dayMin = sessionHistory.reduce(function(sum, e) {
+                return (e.completedAt >= d.getTime() && e.completedAt <= end.getTime()) ? sum + e.minutes : sum;
+            }, 0);
+            days.push({ label: d.toLocaleDateString([], { weekday: 'short' }), minutes: dayMin });
+            if (dayMin > maxMin) maxMin = dayMin;
+        }
+        if (maxMin === 0) return '';
+        var html = '<div style="margin-bottom:14px"><strong style="font-size:14px">📅 Last 7 days</strong>' +
+            '<div style="display:flex;align-items:flex-end;gap:4px;margin-top:8px;height:64px">';
+        days.forEach(function(d) {
+            var barH = maxMin > 0 ? Math.round((d.minutes / maxMin) * 56) : 0;
+            html += '<div style="display:flex;flex-direction:column;align-items:center;flex:1;gap:2px" title="' + Math.round(d.minutes) + ' min">' +
+                '<div style="width:100%;height:' + barH + 'px;background:var(--bar-fill);border-radius:2px 2px 0 0;min-height:' + (d.minutes > 0 ? 3 : 0) + 'px;transition:height 0.3s"></div>' +
+                '<div style="font-size:10px;opacity:0.65">' + d.label + '</div></div>';
+        });
+        html += '</div></div>';
+        return html;
+    }
+    function saveDailyGoal(v) {
+        dailyGoal = Math.max(0, parseInt(v) || 0);
+        try { localStorage.dailyGoal = dailyGoal; } catch(e) {}
+    }
+    function loadDailyGoal() {
+        try { var v = localStorage.dailyGoal; if (v) dailyGoal = Math.max(0, parseInt(v) || 0); } catch(e) {}
+    }
+    function exportHistoryCSV() {
+        if (sessionHistory.length === 0) { showBanner('No history to export.'); return; }
+        var rows = ['Name,Minutes,Date,Time'];
+        sessionHistory.forEach(function(e) {
+            var d = new Date(e.completedAt);
+            rows.push('"' + String(e.name).replace(/"/g, '""') + '",' +
+                e.minutes + ',' + d.toLocaleDateString() + ',' + d.toLocaleTimeString());
+        });
+        try {
+            var blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+            var a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'focus-history.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(function() { URL.revokeObjectURL(a.href); }, 1000);
+        } catch(e) { showBanner('Export not supported in this browser.'); }
+    }
     function showStats() {
         var focusMin = todayFocusMin();
         var h = Math.floor(focusMin / 60), m = Math.round(focusMin % 60);
         var focusStr = h > 0 ? h + 'h ' + m + 'm' : m + ' min';
-        var html = '<div class="stats-summary">Today\'s focus time: ' + focusStr + '</div>';
+
+        // Daily goal progress
+        var goalHtml = '<div style="margin-bottom:14px">' +
+            '<label style="font-size:14px">🎯 Daily goal: ' +
+            '<input type="number" id="daily-goal-input" min="0" max="480" step="15" value="' + dailyGoal + '" ' +
+            'style="width:60px;background:var(--input-bg);border:1px solid var(--input-border);color:var(--input-fg);font:inherit;padding:2px 4px" ' +
+            'onchange="saveDailyGoal(this.value)"> min' +
+            '<small style="opacity:0.6;font-size:12px"> (0 = no goal)</small></label>';
+        if (dailyGoal > 0) {
+            var goalPct = Math.min(100, Math.round((focusMin / dailyGoal) * 100));
+            goalHtml += '<div style="margin-top:6px">' +
+                '<div class="progress-track" style="max-width:100%;height:12px" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + goalPct + '">' +
+                '<div class="progress-fill" style="width:' + goalPct + '%;transition:width 0.3s"></div></div>' +
+                '<small style="opacity:0.7">' + Math.round(focusMin) + ' / ' + dailyGoal + ' min (' + goalPct + '%)</small></div>';
+        }
+        goalHtml += '</div>';
+
+        var html = goalHtml +
+            '<div class="stats-summary">Today\'s focus time: ' + focusStr + '</div>' +
+            build7DayChart();
+
         if (sessionHistory.length === 0) {
             html += '<p>No history yet — complete a timer to record it.</p>';
         } else {
@@ -994,7 +1272,9 @@
             if (sessionHistory.length > 60) {
                 html += '<p><small>Showing latest 60 of ' + sessionHistory.length + ' entries.</small></p>';
             }
-            html += '<button onclick="clearHistory()" style="margin-top:8px;color:var(--danger)">🗑 Clear History</button>';
+            html += '<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">' +
+                '<button onclick="exportHistoryCSV()" aria-label="Export history as CSV">⬇️ Export CSV</button>' +
+                '<button onclick="clearHistory()" style="color:var(--danger)">🗑 Clear History</button></div>';
         }
         document.getElementById('stats-content').innerHTML = html;
         document.getElementById('stats-modal').style.display = 'flex';
@@ -1112,6 +1392,20 @@
                 container.appendChild(buildCard(t));
             }
         });
+        // Reorder DOM to match timers array (appendChild moves existing nodes)
+        timers.forEach(function(t) {
+            var card = container.querySelector('[data-id="'+t.id+'"]');
+            if (card) container.appendChild(card);
+        });
+        // Update move-button disabled state
+        timers.forEach(function(t, i) {
+            var card = container.querySelector('[data-id="'+t.id+'"]');
+            if (!card) return;
+            var upBtn = card.querySelector('.btn-move-up');
+            var dnBtn = card.querySelector('.btn-move-dn');
+            if (upBtn) upBtn.disabled = (i === 0);
+            if (dnBtn) dnBtn.disabled = (i === timers.length - 1);
+        });
         if (timers.length === 1) container.classList.add('solo');
         else container.classList.remove('solo');
     }
@@ -1132,6 +1426,15 @@
                 '<button class="btn-pr" onclick="togglePause('+t.id+')" aria-label="Pause timer">⏸ PAUSE</button>' +
                 '<button onclick="resetTimer('+t.id+')" aria-label="Reset timer">↺ RESET</button>' +
                 '<button onclick="removeTimer('+t.id+')" aria-label="Remove timer">✕</button>' +
+            '</div>' +
+            '<div class="timer-btns timer-btns-sm">' +
+                '<button onclick="addTime('+t.id+',1)" title="Add 1 minute" aria-label="Add 1 minute">+1m</button>' +
+                '<button onclick="addTime('+t.id+',5)" title="Add 5 minutes" aria-label="Add 5 minutes">+5m</button>' +
+                '<button class="btn-loop" onclick="toggleLoop('+t.id+')" title="Loop — restart automatically when done" aria-label="Toggle loop">🔁</button>' +
+                '<button class="btn-watch" onclick="toggleCountUp('+t.id+')" title="Stopwatch — count up from zero" aria-label="Toggle stopwatch">⏱</button>' +
+                '<button class="btn-move-up" onclick="moveTimer('+t.id+',-1)" title="Move up" aria-label="Move timer up">↑</button>' +
+                '<button class="btn-move-dn" onclick="moveTimer('+t.id+',1)" title="Move down" aria-label="Move timer down">↓</button>' +
+                '<button onclick="duplicateTimer('+t.id+')" title="Duplicate timer" aria-label="Duplicate timer">⧉</button>' +
             '</div>';
         return div;
     }
@@ -1139,6 +1442,42 @@
         timers.forEach(function(t) {
             var card = document.querySelector('[data-id="'+t.id+'"]');
             if (!card) return;
+
+            var displayEl = card.querySelector('.timer-display');
+            var fillEl    = card.querySelector('.progress-fill');
+            var trackEl   = card.querySelector('.progress-track');
+            var pauseBtn  = card.querySelector('.btn-pr');
+            var pomoBadge = card.querySelector('.pomo-badge');
+            var loopBtn   = card.querySelector('.btn-loop');
+            var watchBtn  = card.querySelector('.btn-watch');
+
+            // Sync toggle-button active states
+            if (loopBtn)  loopBtn.classList.toggle('active',  !!t.loop);
+            if (watchBtn) watchBtn.classList.toggle('active', !!t.countUp);
+
+            // ── Count-up (Stopwatch) mode ──
+            if (t.countUp) {
+                var elapsed = t.isPaused ? t.remainingMs : Date.now() - t.countUpStart;
+                var cu_h = Math.floor(elapsed / 3600000);
+                var cu_m = Math.floor(elapsed / 60000) % 60;
+                var cu_s = Math.floor(elapsed / 1000)  % 60;
+                var cuText = cu_h > 0
+                    ? cu_h + ':' + String(cu_m).padStart(2,'0') + ':' + String(cu_s).padStart(2,'0')
+                    : cu_m + ':' + String(cu_s).padStart(2,'0');
+                displayEl.textContent = cuText;
+                displayEl.className   = 'timer-display';
+                displayEl.setAttribute('aria-label', cuText + ' elapsed');
+                fillEl.style.width    = '0%';
+                fillEl.className      = 'progress-fill';
+                if (trackEl) trackEl.setAttribute('aria-valuenow', 0);
+                if (pomoBadge) pomoBadge.textContent = '';
+                pauseBtn.textContent = t.isPaused ? '▶ RESUME' : '⏸ PAUSE';
+                pauseBtn.disabled    = false;
+                pauseBtn.setAttribute('aria-label', t.isPaused ? 'Resume stopwatch' : 'Pause stopwatch');
+                card.classList.remove('has-urgent');
+                return;
+            }
+
             var remaining = getRemaining(t);
             var finished  = remaining <= 0;
 
@@ -1149,28 +1488,29 @@
                     playSound();
                     var label = t.name || 'Timer';
                     showNotification('⏰ ' + label + ' finished!', 'Your countdown has ended.');
-                    recordHistory(t);
-                    if (pomodoroState && pomodoroState.timerId === t.id) {
-                        /* Small delay so the finish sound completes before
-                           advancing to the next Pomodoro phase. */
-                        setTimeout(advancePomodoro, 900);
+                    if (t.loop) {
+                        /* Loop mode — restart the timer instead of logging history */
+                        setTimeout(function(tid){ resetTimer(tid); }.bind(null, t.id), 900);
                     } else {
-                        advanceSequential(t.id);
+                        recordHistory(t);
+                        if (pomodoroState && pomodoroState.timerId === t.id) {
+                            /* Small delay so the finish sound completes before
+                               advancing to the next Pomodoro phase. */
+                            setTimeout(advancePomodoro, 900);
+                        } else {
+                            advanceSequential(t.id);
+                        }
                     }
                 }
             }
 
-            var displayEl = card.querySelector('.timer-display');
-            var fillEl    = card.querySelector('.progress-fill');
-            var trackEl   = card.querySelector('.progress-track');
-            var pauseBtn  = card.querySelector('.btn-pr');
-            var pomoBadge = card.querySelector('.pomo-badge');
-
             // Pomodoro badge
-            if (pomodoroState && pomodoroState.timerId === t.id) {
-                pomoBadge.textContent = 'Round ' + pomodoroState.round + ' · ' + pomodoroState.phase;
-            } else {
-                pomoBadge.textContent = '';
+            if (pomoBadge) {
+                if (pomodoroState && pomodoroState.timerId === t.id) {
+                    pomoBadge.textContent = 'Round ' + pomodoroState.round + ' · ' + pomodoroState.phase;
+                } else {
+                    pomoBadge.textContent = '';
+                }
             }
 
             if (finished) {
@@ -1180,6 +1520,7 @@
                 fillEl.style.width    = '0%';
                 fillEl.className      = 'progress-fill';
                 if (trackEl) trackEl.setAttribute('aria-valuenow', '0');
+                card.classList.remove('has-urgent');
             } else {
                 var urgent  = remaining < 60000;
                 var minutes = Math.floor(remaining / 60000);
@@ -1199,6 +1540,7 @@
                 fillEl.style.width = pct + '%';
                 fillEl.className   = urgent ? 'progress-fill urgent' : 'progress-fill';
                 if (trackEl) trackEl.setAttribute('aria-valuenow', Math.round(pct));
+                card.classList.toggle('has-urgent', urgent && !t.isPaused);
             }
 
             if (finished) {
@@ -1215,6 +1557,16 @@
                 pauseBtn.setAttribute('aria-label', 'Pause timer');
             }
         });
+
+        // Body urgent pulse (when any countdown timer is in its last minute)
+        var hasAnyUrgent = timers.some(function(t) {
+            return !t.countUp && !t.hasFinished && !t.isPaused &&
+                   getRemaining(t) < 60000 && getRemaining(t) > 0;
+        });
+        document.body.classList.toggle('has-urgent', hasAnyUrgent);
+
+        updateTabTitle();
+        updateWakeLock();
         updateClock();
     }
 
@@ -1292,6 +1644,14 @@
                 e.preventDefault();
                 if (timers.length > 0) resetTimer(timers[0].id);
                 break;
+            case 'a': case 'A':
+                e.preventDefault();
+                timers.forEach(function(t) { if (!t.isPaused && !t.hasFinished) pauseTimer(t.id); });
+                break;
+            case 's': case 'S':
+                e.preventDefault();
+                timers.forEach(function(t) { if (t.isPaused && !t.hasFinished) resumeTimer(t.id); });
+                break;
             case 'f': case 'F':
                 e.preventDefault();
                 toggleFullscreen();
@@ -1332,15 +1692,64 @@
     /* ════════════════════════════════════════
        THEME
     ════════════════════════════════════════ */
+    function applyAutoTheme() {
+        var prefersDark = !(window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches);
+        document.documentElement.dataset.theme = prefersDark ? '' : 'light';
+    }
     function setTheme(theme) {
-        document.documentElement.dataset.theme = theme;
+        if (theme === 'auto') {
+            applyAutoTheme();
+            try {
+                window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', function() {
+                    if ((localStorage.theme || 'auto') === 'auto') applyAutoTheme();
+                });
+            } catch(e) {}
+        } else {
+            document.documentElement.dataset.theme = theme;
+        }
         try { localStorage.theme = theme; } catch(e) {}
+    }
+
+    /* ════════════════════════════════════════
+       TAB TITLE COUNTDOWN
+    ════════════════════════════════════════ */
+    function updateTabTitle() {
+        var running = timers.filter(function(t){ return !t.countUp && !t.isPaused && !t.hasFinished; });
+        if (running.length === 0) { document.title = 'Countdown Timer'; return; }
+        var urgent = running.reduce(function(min, t) {
+            return getRemaining(t) < getRemaining(min) ? t : min;
+        });
+        var rem = Math.max(0, getRemaining(urgent));
+        var m   = Math.floor(rem / 60000);
+        var s   = Math.floor(rem / 1000) % 60;
+        var lbl = urgent.name ? urgent.name + ' ' : '';
+        document.title = lbl + m + ':' + String(s).padStart(2, '0') + ' — Countdown Timer';
+    }
+
+    /* ════════════════════════════════════════
+       WAKE LOCK (prevent screen sleep while timer runs)
+    ════════════════════════════════════════ */
+    function tryAcquireWakeLock() {
+        if (!('wakeLock' in navigator) || wakeLock) return;
+        navigator.wakeLock.request('screen').then(function(lock) {
+            wakeLock = lock;
+            lock.addEventListener('release', function() { wakeLock = null; });
+        }).catch(function(){});
+    }
+    function updateWakeLock() {
+        var hasRunning = timers.some(function(t){ return !t.isPaused && !t.hasFinished; });
+        if (hasRunning) {
+            tryAcquireWakeLock();
+        } else if (wakeLock) {
+            wakeLock.release();
+            wakeLock = null;
+        }
     }
 
     /* ════════════════════════════════════════
        MODALS
     ════════════════════════════════════════ */
-    var CHANGELOG_VERSION = '1.1.0';   // update this to match the current app version when adding new changelog entries
+    var CHANGELOG_VERSION = '1.2.0';   // update this to match the current app version when adding new changelog entries
 
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
     function showHelp()   { document.getElementById('help-modal').style.display = 'flex'; }
@@ -1383,8 +1792,11 @@
             localStorage.timersState = JSON.stringify(timers.map(function(t) {
                 return {
                     id: t.id, name: t.name, totalMs: t.totalMs,
-                    remainingMs: t.isPaused ? t.remainingMs : Math.max(0, t.endTime - Date.now()),
-                    isPaused: t.isPaused, hasFinished: t.hasFinished, hasPlayedSound: t.hasPlayedSound
+                    remainingMs: t.countUp
+                        ? (t.isPaused ? t.remainingMs : Date.now() - t.countUpStart)
+                        : (t.isPaused ? t.remainingMs : Math.max(0, t.endTime - Date.now())),
+                    isPaused: t.isPaused, hasFinished: t.hasFinished, hasPlayedSound: t.hasPlayedSound,
+                    loop: t.loop || false, countUp: t.countUp || false
                 };
             }));
             localStorage.nextId = nextId;
@@ -1398,11 +1810,14 @@
             if (raw) {
                 var parsed = JSON.parse(raw);
                 timers = parsed.map(function(s) {
+                    var isCountUp = s.countUp || false;
                     return {
                         id: s.id, name: s.name || '', totalMs: s.totalMs,
                         remainingMs: s.remainingMs,
-                        endTime: s.isPaused ? Date.now() : Date.now() + s.remainingMs,
-                        isPaused: s.isPaused, hasFinished: s.hasFinished, hasPlayedSound: s.hasPlayedSound
+                        endTime: isCountUp ? 0 : (s.isPaused ? Date.now() : Date.now() + s.remainingMs),
+                        countUpStart: isCountUp && !s.isPaused ? Date.now() - (s.remainingMs || 0) : 0,
+                        isPaused: s.isPaused, hasFinished: s.hasFinished, hasPlayedSound: s.hasPlayedSound,
+                        loop: s.loop || false, countUp: isCountUp
                     };
                 });
                 nextId = +localStorage.nextId || (maxTimerId() + 1);
@@ -1482,13 +1897,12 @@
     /* ════════════════════════════════════════
        INIT
     ════════════════════════════════════════ */
-    // Theme
+    // Theme — default to 'auto' (follows OS preference)
     try {
-        if (localStorage.theme) {
-            document.documentElement.dataset.theme = localStorage.theme;
-            document.getElementById('theme-select').value = localStorage.theme;
-        }
-    } catch(e) {}
+        var savedTheme = localStorage.theme || 'auto';
+        setTheme(savedTheme);
+        document.getElementById('theme-select').value = savedTheme;
+    } catch(e) { setTheme('auto'); }
 
     // Sound & Volume
     try {
@@ -1525,6 +1939,8 @@
     loadPresets();
     loadSets();
     loadHistory();
+    loadPomoSettings();
+    loadDailyGoal();
 
     // State
     if (!loadState()) loadLegacy();
@@ -1550,6 +1966,15 @@
     renderCards();
     renderPresets();
     setInterval(function() { updateCards(); }, 200);
+
+    // Page Visibility — re-sync display immediately when tab becomes visible
+    document.addEventListener('visibilitychange', function() {
+        if (document.visibilityState === 'visible') {
+            updateCards();
+            // Re-acquire wake lock if needed (browsers release it on hide)
+            updateWakeLock();
+        }
+    });
 
     // PWA Service Worker
     if ('serviceWorker' in navigator) {
