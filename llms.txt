@@ -1,0 +1,22 @@
+# Countdown Timer
+
+> A free, full-screen countdown timer that runs entirely in the browser — no build step, no dependencies, no signup required.
+
+Countdown Timer is a client-side web app for running countdowns, stopwatches, and Pomodoro focus sessions directly in the browser. It supports multiple simultaneous timers, custom presets, themes, alarms, session history, and offline use via a service worker (PWA).
+
+## Key features
+- Multiple timers running side-by-side with pause/resume, loop, and stopwatch modes
+- Pomodoro session manager with configurable Work/Short Break/Long Break durations
+- Timer Sets to save and restore groups of timers
+- Session history with a 7-day focus chart, daily goals, and CSV export
+- Themes (light, ocean, sunset, forest, purple) and an auto theme following system preference
+- Fully offline-capable Progressive Web App (installable, works without a network connection)
+- No account, no signup, no server-side data collection of timer content
+
+## Docs
+- [Homepage / App](https://countdown-html.vercel.app/): The countdown timer app itself
+- [README](https://github.com/krittin-58/countdown-html/blob/main/README.md): Full feature list and project overview
+- [User Manual](https://github.com/krittin-58/countdown-html/blob/main/USER_MANUAL.md): Detailed usage instructions and keyboard shortcuts
+
+## Notes
+This is a static, single-page HTML/CSS/JS application with no backend. All timer data is stored locally in the user's browser (localStorage) and never transmitted to a server.
