@@ -156,3 +156,7 @@ index.html#timers=[{"n":"Work","m":25}]&obs=1   ← transparent background for O
 - Sequential mode, Timer Sets, Session History
 - 6 themes, alarm sounds, font-size slider, OBS overlay mode
 - Share URL, iframe embed, PWA / offline support
+
+## License
+
+MIT — see [LICENSE](LICENSE).

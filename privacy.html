@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy Policy &amp; Terms — Countdown Timer</title>
+<meta name="description" content="Privacy policy and terms of use for Countdown Timer. No accounts, no signup — timer data stays in your browser's local storage and is never sent to a server.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://countdown-html.vercel.app/privacy.html">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+  :root {
+    --bg-start: #123;
+    --bg-end: #234;
+    --fg: #fff;
+    --accent: #4f4;
+    --panel-bg: #353433;
+    --panel-border: #656463;
+    --muted: #b8c2cc;
+  }
+  html, body { margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    background: linear-gradient(to bottom, var(--bg-start), var(--bg-end));
+    color: var(--fg);
+    font: 16px/1.6 Cousine, Menlo, Monaco, monospace;
+  }
+  main {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 40px 20px 80px;
+  }
+  a { color: var(--accent); }
+  h1 { font-size: 1.6em; margin-bottom: 0.2em; }
+  h2 { font-size: 1.15em; margin-top: 2em; border-bottom: 1px solid var(--panel-border); padding-bottom: 0.3em; }
+  .updated { color: var(--muted); font-size: 0.9em; margin-bottom: 2em; }
+  .back { display: inline-block; margin-bottom: 24px; color: var(--muted); text-decoration: none; }
+  .back:hover { color: var(--accent); }
+  section { background: rgba(0,0,0,0.15); border: 1px solid var(--panel-border); border-radius: 8px; padding: 4px 20px; margin-top: 16px; }
+  code { background: rgba(0,0,0,0.3); padding: 0 4px; border-radius: 3px; }
+</style>
+</head>
+<body>
+<main>
+  <a class="back" href="index.html">← Back to Countdown Timer</a>
+  <h1>Privacy Policy &amp; Terms of Use</h1>
+  <p class="updated">Last updated: September 24, 2026</p>
+
+  <section>
+    <h2>Summary</h2>
+    <p>Countdown Timer is a free, static web app with no accounts, no signup, and no backend server. It runs entirely in your browser. There is nothing to buy, nothing to log into, and no personal data collection beyond standard, anonymized web analytics.</p>
+  </section>
+
+  <section>
+    <h2>What data is stored, and where</h2>
+    <p>Your timers, presets, Timer Sets, theme, alarm settings, and session history are saved using your browser's <code>localStorage</code>, on your own device. This data:</p>
+    <ul>
+      <li>is never transmitted to any server operated by this project;</li>
+      <li>is not visible to or collected by the developer;</li>
+      <li>persists across page reloads but can be cleared at any time from your browser settings;</li>
+      <li>is isolated per browser and per device — it does not sync between devices.</li>
+    </ul>
+    <p>If you use the <strong>🔗 Share URL</strong> feature, your timer configuration is encoded directly into the URL you choose to share. No data is sent to a server to generate that link.</p>
+  </section>
+
+  <section>
+    <h2>Analytics</h2>
+    <p>This site uses Google Analytics (Google's <code>gtag.js</code>) to understand aggregate usage, such as page views and general traffic patterns. Google Analytics may use cookies and collect standard technical data (e.g. browser type, approximate location from IP address). It does not have access to your timer data, which never leaves your browser. You can opt out using a browser extension such as Google's Analytics Opt-out Add-on, or by using a browser/extension that blocks third-party trackers.</p>
+  </section>
+
+  <section>
+    <h2>Offline use &amp; the service worker</h2>
+    <p>Countdown Timer is a Progressive Web App (PWA). When you visit, a service worker caches the app's files (HTML, CSS, JS, icons) in your browser so it keeps working offline and loads instantly on return visits. This cache lives entirely on your device and is not accessible to the developer.</p>
+  </section>
+
+  <section>
+    <h2>Notifications</h2>
+    <p>If you enable browser notifications, they are handled by your browser's native Notifications API and used only to alert you when a timer finishes. No notification content is sent through any third-party or project-operated server.</p>
+  </section>
+
+  <section>
+    <h2>Third-party links</h2>
+    <p>Links to this project's GitHub repository or its sponsorship/donation page take you to third-party sites (GitHub, and the payment processor used for donations) with their own privacy policies. This project does not receive or process your payment details for donations — that is handled entirely by the third-party platform.</p>
+  </section>
+
+  <section>
+    <h2>Children's privacy</h2>
+    <p>This app does not knowingly collect personal information from anyone, including children, because it does not collect personal information at all — see above.</p>
+  </section>
+
+  <section>
+    <h2>Terms of use</h2>
+    <p>Countdown Timer is provided free of charge, "as is," without warranty of any kind. It is a hobby/open-source project — use it for meetings, workouts, Pomodoro sessions, streaming overlays, or anything else you find useful. Don't rely on it for safety-critical or medical timing. The developer is not liable for any loss or damage arising from use of this app, to the fullest extent permitted by law.</p>
+  </section>
+
+  <section>
+    <h2>Changes to this policy</h2>
+    <p>This policy may be updated as the app changes. The "Last updated" date above reflects the most recent revision.</p>
+  </section>
+
+  <section>
+    <h2>Contact</h2>
+    <p>Questions or concerns? Open an issue on <a href="https://github.com/krittin-58/countdown-html/issues" target="_blank" rel="noopener">GitHub</a>.</p>
+  </section>
+</main>
+</body>
+</html>
