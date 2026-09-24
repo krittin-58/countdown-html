@@ -1348,8 +1348,12 @@
     /* ════════════════════════════════════════
        SHARE / EMBED / OBS
     ════════════════════════════════════════ */
+    /* Canonical production origin — Share/Embed/OBS links always resolve
+       here instead of location.href, so they stay correct even when the
+       app is opened from a local file, localhost, or a preview deployment. */
+    var CANONICAL_URL = 'https://countdown-html.vercel.app/';
     function buildShareUrl(extraHash) {
-        var base = location.href.split('#')[0].split('?')[0];
+        var base = CANONICAL_URL;
         var data = timers.map(function(t){
             return { n: t.name, m: +(t.totalMs / 60000).toFixed(2) };
         });
