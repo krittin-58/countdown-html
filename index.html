@@ -219,12 +219,24 @@
         transition: opacity 0.15s;
         max-width: calc(100vw - 44px);
     }
-    #ctrl-row { display:flex; flex-wrap:wrap; gap:4px; align-items:center; }
+    #ctrl-row { display:flex; flex-wrap:wrap; gap:0; align-items:center; }
+
+    /* Button groups — purely semantic wrappers; buttons stay direct flex
+       items of #ctrl-row so the row wraps per-button, not per-group */
+    .btn-group { display:contents; }
+    /* Hairline divider between groups — stretches only within its own
+       flex line, so it can't stretch across a wrapped, multi-row group */
+    .grp-divider {
+        width:1px; align-self:stretch;
+        background:var(--panel-border);
+        margin:2px 6px 2px 2px;
+    }
 
     /* Sound + sliders row */
     #options-row {
         display: flex; flex-wrap: wrap; gap:6px; align-items:center;
-        margin-top: 6px;
+        margin-top: 8px; padding-top: 8px;
+        border-top: 1px solid var(--panel-border);
     }
     #options-row label { font-size: 14px; }
     #vol-slider, #font-size-slider {
@@ -372,27 +384,38 @@
     <!-- Control panel -->
     <div id="control" role="navigation" aria-label="Timer controls">
         <div id="ctrl-row">
-            <button onclick="toggleAddForm()" title="Add timer  [N]" aria-label="Add timer">＋ ADD</button>
-            <button onclick="toggleSetsPanel()" title="Timer sets" aria-label="Timer sets">⊞ SETS</button>
-            <button onclick="toggleControls()" title="Hide/show controls  [Esc]" aria-label="Toggle controls">HIDE</button>
-            <button id="btn-fs" onclick="toggleFullscreen()" title="Fullscreen  [F]" aria-label="Toggle fullscreen">⛶ FS</button>
-            <button id="btn-pomo" onclick="startPomodoro()" title="Start Pomodoro session" aria-label="Start Pomodoro">🍅 POMO</button>
-            <button onclick="togglePomoSettings()" title="Pomodoro duration settings" aria-label="Pomodoro settings">⚙️</button>
-            <button id="btn-seq" onclick="toggleSequential()" title="Sequential mode — start next timer automatically" aria-label="Toggle sequential mode">↕ SEQ</button>
-            <button onclick="showShare()" title="Share / Embed / OBS" aria-label="Share">🔗 SHARE</button>
-            <button onclick="showStats()" title="Session history & focus time" aria-label="Statistics">📊 STATS</button>
-            <button id="btn-clock" onclick="toggleClock()" title="Toggle clock display" aria-label="Toggle clock">⊙ CLOCK</button>
-            <button onclick="showHelp()" title="How to use" aria-label="Help">? HELP</button>
-            <button id="btn-changelog" onclick="showChangelog()" title="What's new in this version" aria-label="What's new">📋 WHAT'S NEW</button>
-            <select id="theme-select" onchange="setTheme(this.value)" aria-label="Choose theme">
-                <option value="auto">🌗 Auto (System)</option>
-                <option value="">Dark</option>
-                <option value="light">Light</option>
-                <option value="ocean">Ocean</option>
-                <option value="sunset">Sunset</option>
-                <option value="forest">Forest</option>
-                <option value="purple">Purple</option>
-            </select>
+            <div class="btn-group">
+                <button onclick="toggleAddForm()" title="Add timer  [N]" aria-label="Add timer">＋ ADD</button>
+                <button onclick="toggleSetsPanel()" title="Timer sets" aria-label="Timer sets">⊞ SETS</button>
+                <button id="btn-seq" onclick="toggleSequential()" title="Sequential mode — start next timer automatically" aria-label="Toggle sequential mode">↕ SEQ</button>
+            </div>
+            <span class="grp-divider" aria-hidden="true"></span>
+            <div class="btn-group">
+                <button id="btn-pomo" onclick="startPomodoro()" title="Start Pomodoro session" aria-label="Start Pomodoro">🍅 POMO</button>
+                <button onclick="togglePomoSettings()" title="Pomodoro duration settings" aria-label="Pomodoro settings">⚙️</button>
+                <button onclick="showStats()" title="Session history & focus time" aria-label="Statistics">📊 STATS</button>
+            </div>
+            <span class="grp-divider" aria-hidden="true"></span>
+            <div class="btn-group">
+                <button id="btn-fs" onclick="toggleFullscreen()" title="Fullscreen  [F]" aria-label="Toggle fullscreen">⛶ FS</button>
+                <button id="btn-clock" onclick="toggleClock()" title="Toggle clock display" aria-label="Toggle clock">⊙ CLOCK</button>
+                <button onclick="toggleControls()" title="Hide/show controls  [Esc]" aria-label="Toggle controls">HIDE</button>
+                <select id="theme-select" onchange="setTheme(this.value)" aria-label="Choose theme">
+                    <option value="auto">🌗 Auto (System)</option>
+                    <option value="">Dark</option>
+                    <option value="light">Light</option>
+                    <option value="ocean">Ocean</option>
+                    <option value="sunset">Sunset</option>
+                    <option value="forest">Forest</option>
+                    <option value="purple">Purple</option>
+                </select>
+            </div>
+            <span class="grp-divider" aria-hidden="true"></span>
+            <div class="btn-group">
+                <button onclick="showShare()" title="Share / Embed / OBS" aria-label="Share">🔗 SHARE</button>
+                <button onclick="showHelp()" title="How to use" aria-label="Help">? HELP</button>
+                <button id="btn-changelog" onclick="showChangelog()" title="What's new in this version" aria-label="What's new">📋 WHAT'S NEW</button>
+            </div>
         </div>
 
         <!-- Sound / Volume / Font-size row -->
