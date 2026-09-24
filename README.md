@@ -2,7 +2,7 @@
 
 A full-screen countdown timer that runs entirely in the browser — no build step, no dependencies.
 
-<a href="https://nicklaunches.com/products/countdown-timer/?utm_source=countdown-html.vercel.app&utm_medium=badge&utm_campaign=featured" target="_blank" rel="noopener"><img src="https://nicklaunches.com/badges/featured-dark.png" alt="Countdown Timer on Nick Launches" width="244" height="56" /></a>
+<a href="https://nicklaunches.com/products/countdown-timer/?utm_source=countdown-html.vercel.app&utm_medium=badge&utm_campaign=featured" target="_blank" rel="noopener"><img src="https://nicklaunches.com/badges/featured.png" alt="Countdown Timer on Nick Launches" width="244" height="56" /></a>
 
 ## Features
 
